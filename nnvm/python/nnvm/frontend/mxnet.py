@@ -290,13 +290,17 @@ def _symbol_ring_buffer(inputs, attrs):
     output = _get_nnvm_op('ring_buffer')(*inputs, **attrs)
     return _sym._assign(inputs[1], output)
 
-
 def _copy(inputs, _):
     return _get_nnvm_op('copy')(inputs[0], **{})
 
-
 def _argmax(inputs, attrs):
     return _get_nnvm_op('argmax')(*inputs, **attrs)
+
+def _minimum(inputs, attrs):
+    return _get_nnvm_op('broadcast_min')(*inputs, **attrs)
+
+def _maximum(inputs, attrs):
+    return _get_nnvm_op('broadcast_max')(*inputs, **attrs)
 
 def _ones(_, attrs):
     op_name = 'ones'
@@ -342,6 +346,8 @@ _convert_map = {
     '_rminus_scalar': _rename('__rsub_scalar__'),
     '_contrib_MultiBoxPrior' : _rename('multibox_prior'),
     '_contrib_MultiBoxDetection' : _contrib_multibox_detection,
+    '_minimum'      : _minimum,
+    '_maximum'      : _maximum,
     '_ones'         : _ones,
     '_zeros'        : _zeros,
     'argmax'        : _argmax,
