@@ -102,8 +102,11 @@ Graph AlterOpLayout(const Graph& src) {
     Symbol op;
     bool do_alter =
       fn_alter_op_layout(n->attrs, Symbol::CreateGroup(op_inputs), tensor_infos, &op);
-    if (do_alter) *ret = op.outputs;
-    else new_nodes[n.get()] = nid;
+    if (do_alter) {
+      *ret = op.outputs;
+    } else {
+       new_nodes[n.get()] = nid;
+    }
     return do_alter;
   };
 
