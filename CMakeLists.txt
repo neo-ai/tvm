@@ -131,14 +131,8 @@ file(GLOB_RECURSE NNVM_COMPILER_SRCS
     nnvm/src/core/*.cc
     nnvm/src/pass/*.cc
     nnvm/src/compiler/*.cc
-    nnvm/src/frontend/*.cc
     nnvm/src/top/*.cc
-    3rdparty/dmlc-core/src/*.cc
-    3rdparty/dmlc-core/include/*.h
 )
-list(FILTER NNVM_COMPILER_SRCS EXCLUDE REGEX ".*/io/azure_filesys.cc")
-list(FILTER NNVM_COMPILER_SRCS EXCLUDE REGEX ".*/io/hdfs_filesys.cc")
-list(FILTER NNVM_COMPILER_SRCS EXCLUDE REGEX ".*/io/s3_filesys.cc")
 
 file(GLOB TOPI_SRCS
     topi/src/*.cc
