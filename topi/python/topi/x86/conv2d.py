@@ -312,8 +312,8 @@ def _alter_conv2d_layout(attrs, inputs, tinfo, F):
         return None
 
     dispatch_ctx = autotvm.task.DispatchContext.current
-    target = tvm.target.create(attrs.get_str("target"))
-   # query schedule and fallback if necessary
+    target = tvm.target.current_target()
+    # query schedule and fallback if necessary
     workload = autotvm.task.args_to_workload(
         [data, kernel, strides, padding, dilation, out_dtype], depthwise_conv2d_nchw) \
         if is_depthwise else \
