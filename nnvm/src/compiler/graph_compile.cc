@@ -303,11 +303,11 @@ nnvm::Graph GraphCompile(const nnvm::Graph& g) {
     ret.attrs["device_index"] = std::make_shared<any>(std::move(device_vec));
   }
   // Setup module.
-  static const PackedFunc& fbuild = GetPackedFunc("nnvm.compiler.build_module");
+  static const PackedFunc& fbuild = GetPackedFunc("nnvm.compiler.build_target");
   tvm::runtime::Module module =
       fbuild(tvm::Map<std::string, Array<tvm::LoweredFunc>>(
                  tar_func_map.begin(), tar_func_map.end()),
-             target_host);
+             "", target_host);
 
   ret.attrs["module"] = std::make_shared<any>(std::move(module));
   ret = nnvm::ApplyPass(ret, "PlanMemory");

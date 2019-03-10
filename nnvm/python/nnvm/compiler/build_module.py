@@ -140,11 +140,11 @@ def _lower(sch, inputs, func_name, graph):
         f, (tvm.container.Array, tuple, list)) else [f]
 
 
-@tvm.register_func("nnvm.compiler.build_module")
-def _build(funcs, target_host):
+@tvm.register_func("nnvm.compiler.build_target")
+def _build(funcs, target, target_host):
     if target_host == "":
         target_host = None
-    return tvm.build(funcs, target_host=target_host)
+    return tvm.build(funcs, target=target, target_host=target_host)
 
 
 def _update_shape_dtype(shape, dtype, params):
