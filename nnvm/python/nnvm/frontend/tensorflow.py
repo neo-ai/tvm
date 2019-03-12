@@ -756,7 +756,9 @@ def _pad(name):
         if padlist_key in params:
             padlist = params.pop(padlist_key).asnumpy()
         else:
-            raise RuntimeError("OperatorAttributeValueNotValid : Required parameter {} not found in {}.".format(padlist_key, name))
+            raise RuntimeError("OperatorAttributeValueNotValid : "
+                                "Required parameter {} not found in {}."
+                                .format(padlist_key, name))
         paddings = tuple([tuple(l) for l in padlist])
         attr['pad_width'] = paddings
         attr['pad_value'] = 0
@@ -1209,8 +1211,6 @@ class GraphProto(object):
 
         try:
             from tensorflow.python.framework import tensor_util
-        except ImportError:
-            from nnvm.frontend.util import tensor_util
         except ImportError as e:
             raise ImportError(
                 "Unable to import tensorflow which is required {}".format(e))
@@ -1219,7 +1219,8 @@ class GraphProto(object):
 
         if missing_operators:
             raise NotImplementedError( \
-                "OperatorNotImplemented : The following operators are not implemented: {}".format(missing_operators))
+                "OperatorNotImplemented : "
+                "The following operators are not implemented: {}".format(missing_operators))
 
         for node in graph.node:
             if node.op == 'Placeholder' or node.op == 'PlaceholderWithDefault':
@@ -1407,8 +1408,6 @@ class GraphProto(object):
     def _parse_param(self, key, value, name):
         try:
             from tensorflow.python.framework import tensor_util
-        except ImportError:
-            from nnvm.frontend.util import tensor_util
         except ImportError as e:
             raise ImportError(
                 "Unable to import tensorflow which is required {}".format(e))
@@ -1434,7 +1433,8 @@ class GraphProto(object):
         else:
             if key not in ('dtype', '_output_shapes', '_class'):
                 raise NotImplementedError \
-                    ("OperatorAttributeNotImplemented : Other attributes for a Const(param) Node {} ? .".format(key))
+                    ("OperatorAttributeNotImplemented : "
+                     "Other attributes for a Const(param) Node {} ? .".format(key))
 
     def _get_attr(self, buf):
         """Returns the value of the attr of this buf with the given `name`.
@@ -1456,8 +1456,6 @@ class GraphProto(object):
 
         try:
             from tensorflow.python.framework import dtypes
-        except ImportError:
-            from nnvm.frontend.util import dtypes
         except ImportError as e:
             raise ImportError(
                 "Unable to import tensorflow which is required {}".format(e))
@@ -1563,7 +1561,8 @@ class GraphProto(object):
                                              self._params, graph,
                                              convert_map_rnn)
         else:
-            raise NotImplementedError("OperatorNotImplemented : Operator {} not implemented.".format(op_name))
+            raise NotImplementedError("OperatorNotImplemented : "
+                                      "Operator {} not implemented.".format(op_name))
         return sym
 
     def _fix_extranodes(self, op_name, attr, inputs):
@@ -1598,4 +1597,3 @@ def from_tensorflow(graph, layout="NHWC", shape=None, outputs=None):
     g = GraphProto()
     sym, params = g.from_tensorflow(graph, layout, shape, outputs)
     return sym, params
-
