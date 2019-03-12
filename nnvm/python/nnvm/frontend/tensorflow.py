@@ -757,7 +757,7 @@ def _pad(name):
             padlist = params.pop(padlist_key).asnumpy()
         else:
             raise RuntimeError("OperatorAttributeValueNotValid : "
-                                "Required parameter {} not found in {}." \
+                                "Required parameter {} not found in {}."\
                                 .format(padlist_key, name))
         paddings = tuple([tuple(l) for l in padlist])
         attr['pad_width'] = paddings
