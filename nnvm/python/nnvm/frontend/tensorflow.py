@@ -68,7 +68,8 @@ def _dimension_picker(prefix, surfix=''):
         kernel = attr['kernel_shape']
         if len(kernel) == 2:
             return prefix + '2d' + surfix
-        raise NotImplementedError("OperatorAttributeNotImplemented : Only 2d kernel supported in {}.".format(prefix))
+        raise NotImplementedError("OperatorAttributeNotImplemented : "
+                                  "Only 2d kernel supported in {}.".format(prefix))
     return _impl
 
 def _dimension_constraint():
@@ -103,7 +104,8 @@ def _argx(func, func_name):
             axis_input_vlaue = params[axis_input_name].asnumpy()[0]
         except (IndexError, KeyError):
             raise TypeError( \
-                "OperatorAttributeValueNotValid : Unsupported argument for `{}` : `axis` should be a constant".format(func_name))
+                "OperatorAttributeValueNotValid : "
+                "Unsupported argument for `{}` : `axis` should be a constant".format(func_name))
         return func(inputs[0], axis=axis_input_vlaue, keepdims=False)
     return _impl
 
@@ -129,7 +131,9 @@ def _pooling(name):
             attr['kernel_shape'] = (attr['ksize'][2], attr['ksize'][3])
             attr['strides'] = (attr['strides'][2], attr['strides'][3])
         else:
-            raise TypeError("OperatorAttributeValueNotValid : Unsupported data_format type : {} in {}".format(attr['data_format'], name))
+            raise TypeError("OperatorAttributeValueNotValid : "
+                            "Unsupported data_format type : {} in {}"
+                            .format(attr['data_format'], name))
 
         if attr['_target_layout'] == "NCHW" and attr['data_format'] == "NHWC":
             tmp_shape = attr['_input_shapes'][inputs[0]]
@@ -158,7 +162,9 @@ def _pooling(name):
 
             attr['padding'] = [pad_v[0], pad_h[0], pad_v[1], pad_h[1]]
         else:
-            raise TypeError("OperatorAttributeValueNotValid : Unsupported padding type : {} in {}".format(attr['padding'], name))
+            raise TypeError("OperatorAttributeValueNotValid : "
+                            "Unsupported padding type : {} in {}"
+                            .format(attr['padding'], name))
 
         if name == "avg_pool":
             attr['count_include_pad'] = False
@@ -232,7 +238,9 @@ def _conv(opname):
                 attr['dilations'] = (attr['dilations'][2], attr['dilations'][3])
             attr['strides'] = (attr['strides'][2], attr['strides'][3])
         else:
-            raise TypeError("OperatorAttributeValueNotValid : Unsupported data format type : {} in {}".format(attr['data_format'], opname))
+            raise TypeError("OperatorAttributeValueNotValid : "
+                            "Unsupported data format type : {} in {}"
+                            .format(attr['data_format'], opname))
 
         if opname == 'depthwise':
             attr['groups'] = attr['channels']
@@ -275,7 +283,9 @@ def _conv(opname):
             attr['padding'] = [0, 0]
 
         else:
-            raise TypeError("OperatorAttributeValueNotValid : Unsupported padding type : {} in {}".format(attr['padding'], opname))
+            raise TypeError("OperatorAttributeValueNotValid : "
+                            "Unsupported padding type : {} in {}"
+                            .format(attr['padding'], opname))
 
         if 'kernel_layout' not in attr:
             if opname == 'conv':
