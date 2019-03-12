@@ -132,7 +132,7 @@ def _pooling(name):
             attr['strides'] = (attr['strides'][2], attr['strides'][3])
         else:
             raise TypeError("OperatorAttributeValueNotValid : "
-                            "Unsupported data_format type : {} in {}"
+                            "Unsupported data_format type : {} in {}"\
                             .format(attr['data_format'], name))
 
         if attr['_target_layout'] == "NCHW" and attr['data_format'] == "NHWC":
@@ -163,7 +163,7 @@ def _pooling(name):
             attr['padding'] = [pad_v[0], pad_h[0], pad_v[1], pad_h[1]]
         else:
             raise TypeError("OperatorAttributeValueNotValid : "
-                            "Unsupported padding type : {} in {}"
+                            "Unsupported padding type : {} in {}"\
                             .format(attr['padding'], name))
 
         if name == "avg_pool":
@@ -239,7 +239,7 @@ def _conv(opname):
             attr['strides'] = (attr['strides'][2], attr['strides'][3])
         else:
             raise TypeError("OperatorAttributeValueNotValid : "
-                            "Unsupported data format type : {} in {}"
+                            "Unsupported data format type : {} in {}"\
                             .format(attr['data_format'], opname))
 
         if opname == 'depthwise':
@@ -284,7 +284,7 @@ def _conv(opname):
 
         else:
             raise TypeError("OperatorAttributeValueNotValid : "
-                            "Unsupported padding type : {} in {}"
+                            "Unsupported padding type : {} in {}"\
                             .format(attr['padding'], opname))
 
         if 'kernel_layout' not in attr:
@@ -757,7 +757,7 @@ def _pad(name):
             padlist = params.pop(padlist_key).asnumpy()
         else:
             raise RuntimeError("OperatorAttributeValueNotValid : "
-                                "Required parameter {} not found in {}."
+                                "Required parameter {} not found in {}." \
                                 .format(padlist_key, name))
         paddings = tuple([tuple(l) for l in padlist])
         attr['pad_width'] = paddings
