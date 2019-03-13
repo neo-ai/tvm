@@ -167,7 +167,7 @@ class CompileEngine {
       idtype.emplace_back(GetTypeFlag(t->dtype));
     }
     graph = pass::InferShape(graph, ishape);
-    // TODO: Confirm if we need the assert
+    // TODO(wweic): Confirm if we need the assert
     // CHECK_EQ(graph.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
     graph = pass::InferType(graph, idtype);
     CHECK_EQ(graph.GetAttr<size_t>("dtype_num_unknown_nodes"), 0U);
