@@ -29,33 +29,6 @@ make cython3
 echo "Running relay TFLite frontend test..."
 python3 -m nose -v tests/python/frontend/tflite
 
-echo "Running nnvm unittest..."
-python3 -m nose -v nnvm/tests/python/unittest
-
-echo "Running nnvm compiler test..."
-python3 -m nose -v nnvm/tests/python/compiler
-
-echo "Running nnvm ONNX frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/onnx
-
-echo "Running nnvm MXNet frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/mxnet
-
-echo "Running nnvm Keras frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/keras
-
-echo "Running nnvm Tensorflow frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/tensorflow
-
-echo "Running nnvm CoreML frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/coreml
-
-echo "Running nnvm Caffe2 frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/caffe2
-
-echo "Running nnvm DarkNet frontend test..."
-python3 -m nose -v nnvm/tests/python/frontend/darknet || exit -1
-
 echo "Running relay MXNet frontend test..."
 python3 -m nose -v tests/python/frontend/mxnet
 
@@ -78,4 +51,4 @@ echo "Running relay caffe2 frontend test..."
 python3 -m nose -v tests/python/frontend/caffe2
 
 echo "Running relay DarkNet frontend test..."
-python3 -m nose -v tests/python/frontend/darknet || exit -1
+python3 -m nose -v tests/python/frontend/darknet
