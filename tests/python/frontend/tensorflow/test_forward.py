@@ -175,7 +175,7 @@ def compare_tf_with_tvm(in_data, in_name, out_name, init_global_variables=False,
     with tf.compat.v1.Session() as sess:
         if init_global_variables:
             sess.run(variables.global_variables_initializer())
-        final_graph_def = tf.graph_util.convert_variables_to_constants(
+        final_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
             sess,
             sess.graph.as_graph_def(add_shapes=True),
             out_node,
@@ -193,6 +193,7 @@ def compare_tf_with_tvm(in_data, in_name, out_name, init_global_variables=False,
             tvm_output = run_tvm_graph(final_graph_def, in_data, in_node,
                                        target=device, out_names=out_name,
                                        num_output=len(out_name), opt_level=opt_level, mode=mode)
+
             # since the names from tensorflow and relay runs are not exactly same,
             # first len(tf_output) will be compared
             for i in range(len(tf_output)):
@@ -1542,8 +1543,9 @@ def _test_forward_nms_v3(bx_shape, score_shape, iou_threshold, score_threshold, 
 
 def test_forward_nms_v3():
     """ NonMaxSuppressionV3 """
-    _test_forward_nms_v3((20, 4), (20,), 0.5, 0.7, 10)
-    _test_forward_nms_v3((5, 4), (5, ), 0.4, 0.6, 5)
+    _test_forward_nms_v3((5, 4), (5,), 0.7, 0.5, 5)
+    _test_forward_nms_v3((20, 4), (20,), 0.5, 0.6, 10)
+    _test_forward_nms_v3((1000, 4), (1000,), 0.3, 0.7, 1000)
 
 
 #######################################################################
@@ -2776,7 +2778,7 @@ if __name__ == '__main__':
     test_forward_l2_normalize()
     test_forward_space_to_batch_nd()
     test_forward_batch_to_space_nd()
-    #test_forward_nms_v3()
+    test_forward_nms_v3()
 
     # End to End
     test_forward_inception_v3()
@@ -2799,4 +2801,3 @@ if __name__ == '__main__':
     test_forward_where()
     test_forward_matmul()
     test_forward_batch_matmul()
-    test_forward_nms_v3()

@@ -94,7 +94,7 @@ def _need_prelude_for_shape_inference(op):
     return "TensorArray" in op
 
 def _need_module_for_shape_inference(op):
-    return op in ['StridedSlice, NonMaxSuppressionV3']
+    return op in ['StridedSlice']
 
 def _rsqrt():
     def _impl(inputs, attr, params):
@@ -333,41 +333,38 @@ def _nms():
         # score_threshold was introduced from V3
         score_threshold = np.atleast_1d(inputs[4].data.asnumpy())[0] if len(inputs) > 4 else None
 
+        # Generate data with shape (1, num_anchors, 5)
         scores = AttrCvt(op_name="expand_dims",
                          extras={'axis': -1, 'num_newaxis': 1})([inputs[1]], attr)
-
         data = get_relay_op('concatenate')([scores, inputs[0]], -1)
-        # expand to [class_id, prob, box]
-        # data = _get_relay_op('concatenate')([scores, data], -1)
-        # expand to [batch_size, num_anchors, 6] or [batch_size, num_anchors, 5]
-
         data = get_relay_op('expand_dims')(data, 0, 1)
 
-        # Don't need to call get_valid_counts for TensorFlow and ONNX
-        # ct, data = _get_relay_op('get_valid_counts')(data, score_threshold=score_threshold,
-        #                                              id_index=-1, score_index=0)
-        # get the number of anchors
-        data_shape = attr['_input_shapes'][inputs[1]]
-        valid_cnt = _expr.const(data_shape)
+        # reason why using get_valid_counts is for inference performance
+        ct, data, indices = get_relay_op('get_valid_counts')(data,
+                                                             score_threshold=score_threshold,
+                                                             id_index=-1,
+                                                             score_index=0)
         # TensorFlow NMS doesn't have parameter top_k
         top_k = -1
-        # score_index is 0 since TF doesn't have class id for nms input
+        # TF doesn't have class id for nms input
         score_index = 0
         nms_ret = get_relay_op('non_max_suppression')(data=data,
-                                                      valid_count=valid_cnt,
+                                                      valid_count=ct,
+                                                      indices=indices,
                                                       max_output_size=max_output_size,
-                                                      score_threshold=score_threshold,
                                                       iou_threshold=iou_threshold,
-                                                      force_suppress=False,
+                                                      force_suppress=True,
                                                       top_k=top_k,
                                                       coord_start=1,
                                                       score_index=score_index,
                                                       id_index=-1,
                                                       return_indices=True,
                                                       invalid_to_bottom=False)
-
+        # squeeze it, TF NMS is not batched
         end = get_relay_op("squeeze")(nms_ret[1], axis=[1])
         data_slice = get_relay_op("squeeze")(nms_ret[0], axis=[0])
+
+        # slice to get the dynamic result
         ret = get_relay_op("strided_slice")(data_slice, _expr.const([0]), end, _expr.const([1]))
         return ret
     return _impl
@@ -408,7 +405,8 @@ def _crop_and_resize():
 
         out = None
         begin = [0] * data_dim
-        size = data_shape[:]
+        end = data_shape[:]
+        strides = [1] * data_dim
         for idx in box_ind:
             # 1) Crop
             # y is mapped to the image coordinate at y * (image_height - 1)
@@ -416,10 +414,13 @@ def _crop_and_resize():
             begin[0] = idx
             begin[1] = int(round(boxes[idx][0] * (data_shape[1] - 1)))
             begin[2] = int(round(boxes[idx][1] * (data_shape[2] - 1)))
-            size[0] = idx + 1
-            size[1] = int(round((data_shape[1] - 1) * boxes[idx][2])) + 1
-            size[2] = int(round((data_shape[2] - 1) * boxes[idx][3])) + 1
-            res_crop = _op.strided_slice(inputs[0], begin=begin, end=size)
+            end[0] = idx + 1
+            end[1] = int(round((data_shape[1] - 1) * boxes[idx][2])) + 1
+            end[2] = int(round((data_shape[2] - 1) * boxes[idx][3])) + 1
+            res_crop = _op.strided_slice(inputs[0],
+                                         begin=_expr.const(begin),
+                                         end=_expr.const(end),
+                                         strides=_expr.const(strides))
 
             # 2) Resize
             res_resize = get_relay_op('resize')(res_crop, **attrs)
@@ -662,12 +663,16 @@ def _slice():
         data_shape = attr['_input_shapes'][inputs[0]]
         data_dim = len(data_shape)
         end = size
+        strides = [1] * data_dim
         for i in range(data_dim):
             if size[i] == -1:
                 end[i] = data_shape[i] - begin[i]
             else:
                 end[i] += begin[i]
-        return _op.strided_slice(inputs[0], begin=begin, end=end)
+        return _op.strided_slice(inputs[0],
+                                 begin=_expr.const(begin),
+                                 end=_expr.const(end),
+                                 strides=_expr.const(strides))
     return _impl
 
 
@@ -1037,7 +1042,10 @@ def _stridedSlice():
         fshape_indices = None
         if begin_mask or end_mask or ellipsis_mask or new_axis_mask or shrink_axis_mask:
             begin, end, stride, fshape_indices = _transform_mask(stride_dim, ellipsis_mask)
-        out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
+        out = _op.strided_slice(inputs[0],
+                                begin=_expr.const(begin),
+                                end=_expr.const(end),
+                                strides=_expr.const(stride))
         out_shape = _infer_shape(out, mod=mod)
         if not fshape_indices:
             fshape_indices = range(len(out_shape))

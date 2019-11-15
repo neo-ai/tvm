@@ -22,7 +22,6 @@ import topi
 from topi.util import get_const_int, get_const_float, get_float_tuple
 from .. import op as reg
 from ..op import OpPattern
-from ....hybrid import script
 
 
 @reg.register_schedule("vision.multibox_prior")
@@ -104,7 +103,6 @@ def compute_nms(attrs, inputs, output_type, target):
     """Compute definition of nms"""
     return_indices = bool(get_const_int(attrs.return_indices))
     max_output_size = get_const_int(attrs.max_output_size)
-    score_threshold = get_const_float(attrs.score_threshold)
     iou_threshold = get_const_float(attrs.iou_threshold)
     force_suppress = bool(get_const_int(attrs.force_suppress))
     top_k = get_const_int(attrs.top_k)
@@ -115,8 +113,8 @@ def compute_nms(attrs, inputs, output_type, target):
 
     ret = topi.vision.non_max_suppression(inputs[0],
                                           inputs[1],
+                                          inputs[2],
                                           max_output_size,
-                                          score_threshold,
                                           iou_threshold,
                                           force_suppress,
                                           top_k,
@@ -130,4 +128,3 @@ def compute_nms(attrs, inputs, output_type, target):
 
 
 reg.register_pattern("vision.non_max_suppression", OpPattern.OPAQUE)
-

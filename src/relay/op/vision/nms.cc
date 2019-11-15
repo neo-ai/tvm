@@ -40,9 +40,12 @@ bool GetValidCountRel(const Array<Type>& types,
   CHECK_EQ(dshape.size(), 3) << "Input data should be 3-D.";
 
   std::vector<IndexExpr> oshape({data->shape[0]});
+  std::vector<IndexExpr> oshape_indices({data->shape[0], data->shape[1]});
   std::vector<Type> fields;
   fields.push_back(TensorTypeNode::make(oshape, Int(32)));
   fields.push_back(TensorTypeNode::make(data->shape, data->dtype));
+  fields.push_back(TensorTypeNode::make(oshape_indices, Int(32)));
+
 
   // assign output type
   reporter->Assign(types[1], TupleTypeNode::make(Array<Type>(fields)));
@@ -83,7 +86,7 @@ bool NMSRel(const Array<Type>& types,
             int num_inputs,
             const Attrs& attrs,
             const TypeReporter& reporter) {
-  CHECK_EQ(types.size(), 3);
+  CHECK_EQ(types.size(), 4);
   const auto* data = types[0].as<TensorTypeNode>();
   const auto* valid_count = types[1].as<TensorTypeNode>();
   const NonMaximumSuppressionAttrs* param =
@@ -101,9 +104,9 @@ bool NMSRel(const Array<Type>& types,
     fields.push_back(TensorTypeNode::make(oshape, Int(32)));
     std::vector<IndexExpr> countshape({dshape[0], 1});
     fields.push_back(TensorTypeNode::make(countshape, Int(32)));
-    reporter->Assign(types[2], TupleTypeNode::make(Array<Type>(fields)));
+    reporter->Assign(types[3], TupleTypeNode::make(Array<Type>(fields)));
   } else {
-    reporter->Assign(types[2], TensorTypeNode::make(dshape, data->dtype));
+    reporter->Assign(types[3], TensorTypeNode::make(dshape, data->dtype));
   }
   return true;
 }
@@ -111,8 +114,8 @@ bool NMSRel(const Array<Type>& types,
 
 Expr MakeNMS(Expr data,
              Expr valid_count,
+             Expr indices,
              int max_output_size,
-             double score_threshold,
              double iou_threshold,
              bool force_suppress,
              int top_k,
@@ -123,7 +126,6 @@ Expr MakeNMS(Expr data,
              bool invalid_to_bottom) {
   auto attrs = make_node<NonMaximumSuppressionAttrs>();
   attrs->max_output_size = max_output_size;
-  attrs->score_threshold = score_threshold;
   attrs->iou_threshold = iou_threshold;
   attrs->force_suppress = force_suppress;
   attrs->top_k = top_k;
@@ -133,7 +135,7 @@ Expr MakeNMS(Expr data,
   attrs->return_indices = return_indices;
   attrs->invalid_to_bottom = invalid_to_bottom;
   static const Op& op = Op::Get("vision.non_max_suppression");
-  return CallNode::make(op, {data, valid_count}, Attrs(attrs), {});
+  return CallNode::make(op, {data, valid_count, indices}, Attrs(attrs), {});
 }
 
 
@@ -147,9 +149,10 @@ be in the format of [class_id, score, left, top, right, bottom]
 or [score, left, top, right, bottom]. Set id_index to be -1 to
 ignore class_id axis.
 )doc" TVM_ADD_FILELINE)
-.set_num_inputs(2)
+.set_num_inputs(3)
 .add_argument("data", "Tensor", "Input data.")
 .add_argument("valid_count", "Tensor", "Number of valid anchor boxes.")
+.add_argument("indices", "Tensor", "Corresponding indices in original input tensor.")
 .set_support_level(5)
 .add_type_rel("NMS", NMSRel);
 

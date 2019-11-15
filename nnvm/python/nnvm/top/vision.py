@@ -94,7 +94,7 @@ def compute_nms(attrs, inputs, _):
     id_index = attrs.get_int('id_index')
     invalid_to_bottom = attrs.get_bool('invalid_to_bottom')
 
-    return topi.vision.non_max_suppression(inputs[0], inputs[1],
+    return topi.vision.non_max_suppression(inputs[0], inputs[1], inputs[1],
                                            max_output_size=max_output_size,
                                            iou_threshold=iou_threshold,
                                            force_suppress=force_suppress,

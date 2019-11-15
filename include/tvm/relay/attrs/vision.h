@@ -96,7 +96,6 @@ struct GetValidCountsAttrs : public tvm::AttrsNode<GetValidCountsAttrs> {
 /*! \brief Attributes used in non_maximum_suppression operator */
 struct NonMaximumSuppressionAttrs : public tvm::AttrsNode<NonMaximumSuppressionAttrs> {
   int max_output_size;
-  double score_threshold;
   double iou_threshold;
   bool force_suppress;
   int top_k;
@@ -110,8 +109,6 @@ struct NonMaximumSuppressionAttrs : public tvm::AttrsNode<NonMaximumSuppressionA
     TVM_ATTR_FIELD(max_output_size).set_default(-1)
       .describe("Max number of output valid boxes for each instance."
                 "By default all valid boxes are returned.");
-    TVM_ATTR_FIELD(score_threshold).set_default(0.0)
-      .describe("Non-maximum suppression score threshold.");
     TVM_ATTR_FIELD(iou_threshold).set_default(0.5)
       .describe("Non-maximum suppression iou threshold.");
     TVM_ATTR_FIELD(force_suppress).set_default(false)
