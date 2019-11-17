@@ -987,7 +987,7 @@ if __name__ == "__main__":
     test_alter_layout_scalar()
     test_alter_layout_concatenate()
     test_alter_layout_nchw_upsamping_op()
-    test_alter_layout_strided_slice()
+    # test_alter_layout_strided_slice()
     test_alter_layout_depthwise_conv2d()
     test_alter_layout_prelu()
     test_alter_layout_pad()

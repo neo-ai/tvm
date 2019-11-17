@@ -197,7 +197,8 @@ def test_combine_parallel_conv2d_multiple_blocks():
 
 
 if __name__ == "__main__":
-    test_combine_parallel_conv2d()
-    test_combine_parallel_conv2d_scale_relu()
-    test_combine_parallel_conv2d_scale()
-    test_combine_parallel_conv2d_multiple_blocks()
+    pass
+    #test_combine_parallel_conv2d()
+    #test_combine_parallel_conv2d_scale_relu()
+    #test_combine_parallel_conv2d_scale()
+    #test_combine_parallel_conv2d_multiple_blocks()
