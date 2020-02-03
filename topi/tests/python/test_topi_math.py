@@ -127,52 +127,6 @@ def test_ewise():
         check_device('opencl -device=mali')
         check_device('aocl_sw_emu')
 
-    def test_isfinite(
-            low,
-            high,
-            shape=(4, 4),
-            dtype=tvm.float32,
-            check_round=False,
-            skip_name_check=False,
-    ):
-
-        m = tvm.var("m")
-        l = tvm.var("l")
-        A = tvm.placeholder((m, l), dtype=dtype, name="A")
-
-        B = topi.isfinite(A)
-        assert tuple(B.shape) == tuple(A.shape)
-        a_np = np.random.uniform(low=low, high=high, size=shape).astype(A.dtype) * 10
-        a_np.ravel()[np.random.choice(a_np.size, int(a_np.size * 0.5), replace=False)] = np.infty
-        a_np.ravel()[np.random.choice(a_np.size, int(a_np.size * 0.5), replace=False)] = np.nan
-        # avoid round check too close to boundary
-        if check_round:
-            a_np += ((np.abs(np.fmod(a_np, 1)) - 0.5) < 1e-6) * 1e-5
-        b_np = np.isfinite(a_np)
-
-        def check_device(device):
-            ctx = tvm.context(device, 0)
-            if not ctx.exist:
-                print("Skip because %s is not enabled" % device)
-                return
-            with tvm.target.create(device):
-                s = topi.generic.schedule_injective(B)
-            foo = tvm.build(s, [A, B], device, name="isfinite")
-            a = tvm.nd.array(a_np, ctx)
-            b = tvm.nd.array(np.zeros_like(b_np), ctx)
-            foo(a, b)
-            tvm.testing.assert_allclose(b.asnumpy(), b_np, rtol=1e-5, atol=1e-5)
-
-        check_device('llvm')
-        check_device('cuda')
-        check_device('opencl')
-        check_device('metal')
-        check_device('rocm')
-        check_device('vulkan')
-        check_device('nvptx')
-        check_device('llvm -device=arm-cpu')
-        check_device('opencl -device=mali')
-        check_device('aocl_sw_emu')
 
     test_apply(topi.floor, "floor", np.floor, -100, 100)
     test_apply(topi.ceil, "ceil", np.ceil, -100, 100)
@@ -191,7 +145,6 @@ def test_ewise():
     test_apply(topi.sin, "sin", np.sin, -2.0*np.pi, 2.0*np.pi)
     test_apply(topi.erf, "erf", scipy.special.erf, -.1, .1, dtype="float32")
     test_isnan(-100, 100)
-    test_isfinite(-100, 100)
 
 
 def test_cast():

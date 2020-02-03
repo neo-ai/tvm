@@ -520,14 +520,6 @@ TVM_DLL Expr abs(Expr x);
 TVM_DLL Expr isnan(Expr x);
 
 /*!
- * \brief Check whether x is finite
- * \param x The input expression.
- * \return The result expression.
- */
-
-TVM_DLL Expr isfinite(Expr x);
-
-/*!
  * \brief sum of of source expression over axis
  * \param source The source expression.
  * \param axis List of iteration variables that will be used for reduction.

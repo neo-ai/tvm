@@ -32,7 +32,6 @@ List of operators
    topi.trunc
    topi.round
    topi.abs
-   topi.isfinite
    topi.isnan
    topi.exp
    topi.tanh
@@ -186,7 +185,6 @@ topi
 .. autofunction:: topi.logical_and
 .. autofunction:: topi.logical_or
 .. autofunction:: topi.logical_not
-.. autofunction:: topi.isfinite
 
 topi.nn
 ~~~~~~~

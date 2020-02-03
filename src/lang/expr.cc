@@ -28,39 +28,6 @@
 #include <limits>
 
 namespace tvm {
-// Inifinity value for data type
-Expr DataType::infinity() const {
-  using namespace ir;
-  CHECK_EQ(lanes(), 1);
-  if (is_int()) {
-    if (bits() == 64) {
-      return IntImm::make(*this, std::numeric_limits<int64_t>::infinity());
-    } else if (bits() < 64) {
-      int64_t val = 1;
-      val = (val << (bits() - 1)) - 1;
-      return IntImm::make(*this, val);
-    }
-  } else if (is_uint()) {
-    if (bits() == 64) {
-      return UIntImm::make(*this, std::numeric_limits<uint64_t>::infinity());
-    } else if (bits() < 64) {
-      uint64_t val = 1;
-      val = (val << static_cast<uint64_t>(bits())) - 1;
-      return UIntImm::make(*this, val);
-    }
-  } else if (is_float()) {
-    if (bits() == 64) {
-      return FloatImm::make(*this, std::numeric_limits<double>::infinity());
-    } else if (bits() == 32) {
-      return FloatImm::make(*this, std::numeric_limits<float>::infinity());
-    } else if (bits() == 16) {
-      return FloatImm::make(*this, 65504.0);
-    }
-  }
-  LOG(FATAL) << "Cannot decide infinity for type" << *this;
-  return Expr();
-}
-
 Expr::Expr(int32_t value)
     : Expr(IntImm::make(DataType::Int(32), value)) {}
 

@@ -38,7 +38,6 @@ tvm.intrin
    tvm.nearbyint
    tvm.abs
    tvm.isnan
-   tvm.isfinite
 
 .. autofunction:: tvm.call_packed
 .. autofunction:: tvm.call_pure_intrin
@@ -57,4 +56,3 @@ tvm.intrin
 .. autofunction:: tvm.nearbyint
 .. autofunction:: tvm.abs
 .. autofunction:: tvm.isnan
-.. autofunction:: tvm.isfinite

@@ -472,20 +472,6 @@ def isnan(x):
     """
     return _make.isnan(x)
 
-def isfinite(x):
-    """Check if input value is finite.
-
-    Parameters
-    ----------
-    x : Expr
-        Input argument.
-
-    Returns
-    -------
-    y : Expr
-        The result.
-    """
-    return _make.isfinite(x)
 
 def power(x, y):
     """x power y

@@ -178,7 +178,7 @@ Expr Let::make(Var var, Expr value, Expr body) {
 
 const char* Call::vectorizable_intrinsics[] = {
     "floor", "ceil", "sign", "trunc", "fabs", "round", "exp", "tanh", "sqrt",
-    "log", "sin", "cos", "pow", "isfinite", ir::Call::shift_left, ir::Call::shift_right,
+    "log", "sin", "cos", "pow", ir::Call::shift_left, ir::Call::shift_right,
     ir::Call::likely, ir::Call::popcount
 };
 

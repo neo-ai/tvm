@@ -2398,14 +2398,6 @@ def test_forward_abs():
     tf.math.abs(in_data, name="abs")
     compare_tf_with_tvm([np_data], ['in_data:0'], 'abs:0')
 
-def test_forward_isfinite():
-    """test operator Isfinite"""
-    np_data = np.random.uniform(1, 100, size=(9, 11)).astype(np.float32)
-    tf.reset_default_graph()
-    in_data = tf.placeholder(tf.float32, (9, 11), name="in_data")
-    tf.math.is_finite(in_data, name="isfinite")
-    compare_tf_with_tvm([np_data], ['in_data:0'], 'isfinite:0')
-
 def _test_forward_zeros_like(in_shape, dtype):
     np_data = np.random.uniform(-10, 10, size=in_shape).astype(dtype)
     tf.reset_default_graph()

@@ -187,7 +187,7 @@ However, NO ``True`` and ``False`` keyword supported yet.
 Math Intrinsics
 ~~~~~~~~~~~~~~~
 
-So far, these math intrinsics, ``log``, ``exp``, ``sigmoid``, ``isfinite``,
+So far, these math intrinsics, ``log``, ``exp``, ``sigmoid``,
 ``tanh``, ``power``, and ``popcount``, are supported.
 No import is required, just as it is mentioned in `Software Emulation`_, just use it!
 
@@ -231,4 +231,4 @@ Assert statement is supported, you can simply use it as it is in standard Python
 Keywords
 ~~~~~~~~
 - For keywords: ``serial``, ``range``, ``unroll``, ``parallel``, ``vectorize``, ``bind``, ``const_expr``
-- Math keywords: ``log``, ``exp``, ``sigmoid``, ``tanh``, ``power``, ``popcount`` ``isfinite``,
+- Math keywords: ``log``, ``exp``, ``sigmoid``, ``tanh``, ``power``, ``popcount``

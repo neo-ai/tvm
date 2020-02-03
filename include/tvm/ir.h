@@ -575,7 +575,6 @@ class Call : public ExprNode {
   static constexpr const char* glsl_texture_store = "glsl_texture_store";
   static constexpr const char* prefetch = "prefetch";
   static constexpr const char* isnan = "isnan";
-  static constexpr const char* isfinite = "isfinite";
 
   /*! \brief Vectorizable intrinsic list. */
   static const char* vectorizable_intrinsics[];

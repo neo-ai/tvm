@@ -687,25 +687,7 @@ def test_gather_nd():
     verify_gather_nd((3, 2, 2), (2, 2), [[0, 1], [1, 0]])
     verify_gather_nd((3, 2), (2, 2, 3), [[[0, 1, 2], [2, 0, 1]], [[0, 0, 0], [1, 1, 1]]])
 
-def test_isfinite():
-    op, ref = relay.isfinite, np.isfinite
-    shape = (2, 2, 2)
-    x = relay.var("x", relay.TensorType(shape, "float32"))
-    y = op(x)
-    yy = run_infer_type(y)
-    assert yy.checked_type == relay.TensorType(shape, "bool")
-
-    if ref is not None:
-        data = np.random.rand(*shape).astype('float32')
-        data[1][1][1] = -1 * data[1][1][1]
-        data[1][1][0] = np.infty
-        intrp = create_executor()
-        op_res = intrp.evaluate(y, {x: data})
-        ref_res = ref(data)
-        np.testing.assert_allclose(op_res.asnumpy(), ref_res, rtol=0.01)
-
 if __name__ == "__main__":
-    test_isfinite()
     test_arange()
     test_cast()
     test_zeros_ones()

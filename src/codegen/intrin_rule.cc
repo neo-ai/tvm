@@ -74,15 +74,6 @@ TVM_REGISTER_GLOBAL("tvm.intrin.rule.default.sigmoid")
     *rv = one / (one + exp(-call->args[0]));
   });
 
-TVM_REGISTER_GLOBAL("tvm.intrin.rule.default.isfinite")
-.set_body([](const TVMArgs& args, TVMRetValue* rv){
-    Expr e = args[0];
-    const Call* call = e.as<Call>();
-    CHECK(call != nullptr);
-
-    *rv = isfinite(call->args[0]);
-  });
-
 }  // namespace intrin
 }  // namespace codegen
 }  // namespace tvm

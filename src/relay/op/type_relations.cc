@@ -115,7 +115,7 @@ bool IdentityCompRel(const Array<Type>& types,
   reporter->Assign(types[1],
                   ConcreteBroadcast(ToTensorType(types[0]),
                   ToTensorType(types[0]),
-                  ::tvm::Bool()));
+                  ::tvm::DataType::Bool()));
   return true;
 }
 

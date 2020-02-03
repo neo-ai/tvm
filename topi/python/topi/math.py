@@ -242,23 +242,6 @@ def abs(x):
     """
     return tvm.compute(x.shape, lambda *i: tvm.abs(x(*i)))
 
-@tvm.tag_scope(tag=tag.ELEMWISE)
-def isfinite(x):
-    """Take finiteness of the input of x, element-wise.
-
-    Parameters
-    ----------
-    x : tvm.Tensor
-        Input argument.
-
-    Returns
-    -------
-    y : tvm.Tensor
-        The result.
-    """
-    return tvm.compute(x.shape, lambda *i: tvm.isfinite(x(*i)))
-
-
 
 @tvm.tag_scope(tag=tag.ELEMWISE)
 def isnan(x):
