@@ -44,6 +44,7 @@ register_schedule("tanh", schedule_broadcast)
 register_schedule("logical_not", schedule_broadcast)
 register_schedule("negative", schedule_broadcast)
 register_schedule("copy", schedule_broadcast)
+
 register_schedule("add", schedule_broadcast)
 register_schedule("subtract", schedule_broadcast)
 register_schedule("multiply", schedule_broadcast)

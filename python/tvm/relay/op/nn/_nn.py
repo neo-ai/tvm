@@ -1148,14 +1148,3 @@ def pad_shape_func(attrs, inputs, _):
 reg.register_shape_func("nn.bias_add", False, elemwise_shape_func)
 reg.register_shape_func("nn.softmax", False, elemwise_shape_func)
 reg.register_shape_func("nn.relu", False, elemwise_shape_func)
-
-# conv2d
-def _find_conv2d_op(op):
-    """Find the op with conv2d in its tag by traversing."""
-    if 'conv2d' in op.tag:
-        return op
-    for tensor in op.input_tensors:
-        op_ = _find_conv2d_op(tensor.op)
-        if op_ is not None:
-            return op_
-    return None
