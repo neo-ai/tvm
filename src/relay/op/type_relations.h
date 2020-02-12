@@ -45,11 +45,6 @@ bool IdentityRel(const Array<Type>& types,
                  const Attrs& attrs,
                  const TypeReporter& reporter);
 
-bool IdentityCompRel(const Array<Type>& types,
-                 int num_inputs,
-                 const Attrs& attrs,
-                 const TypeReporter& reporter);
-
 /*!
  * \brief The broadcast type relation, implements the broadcasting
  * rule over the two input types producing the broadcasted type.

@@ -254,7 +254,6 @@ def abs(data):
     """
     return _make.abs(data)
 
-
 def sign(data):
     """Compute element-wise absolute of data.
 

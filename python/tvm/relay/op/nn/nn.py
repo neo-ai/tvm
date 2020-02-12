@@ -2181,4 +2181,3 @@ def space_to_depth(data, block_size, layout='NCHW'):
                            in_height / block_size, in_width / block_size]
     """
     return _make.space_to_depth(data, block_size, layout)
-

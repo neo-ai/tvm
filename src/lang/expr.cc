@@ -28,6 +28,7 @@
 #include <limits>
 
 namespace tvm {
+
 Expr::Expr(int32_t value)
     : Expr(IntImm::make(DataType::Int(32), value)) {}
 

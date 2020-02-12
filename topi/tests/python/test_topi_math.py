@@ -102,6 +102,7 @@ def test_ewise():
         if check_round:
             a_np += ((np.abs(np.fmod(a_np, 1)) - 0.5) < 1e-6) * 1e-5
         b_np = np.isnan(a_np)
+        
         def check_device(device):
             ctx = tvm.context(device, 0)
             if not ctx.exist:
@@ -126,7 +127,6 @@ def test_ewise():
         check_device('llvm -device=arm-cpu')
         check_device('opencl -device=mali')
         check_device('aocl_sw_emu')
-
 
     test_apply(topi.floor, "floor", np.floor, -100, 100)
     test_apply(topi.ceil, "ceil", np.ceil, -100, 100)

@@ -239,6 +239,7 @@ RELAY_REGISTER_UNARY_OP("abs")
 .set_support_level(3)
 .set_attr<FTVMCompute>("FTVMCompute", RELAY_UNARY_COMPUTE(topi::abs));
 
+
 RELAY_REGISTER_UNARY_OP("tanh")
 .describe(R"code(Returns the tanh of input array, computed element-wise.
 
