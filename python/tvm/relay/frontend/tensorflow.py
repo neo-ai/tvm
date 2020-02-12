@@ -2574,7 +2574,6 @@ def from_tensorflow(graph, layout="NHWC", shape=None, outputs=None):
     shape : Dictionary of input dimensions (Optional)
         Graph level input shape dictionary.
 
-
     outputs : List of output tensor names (Optional)
         if not specified then the last node is assumed as graph output.
 
