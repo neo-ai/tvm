@@ -538,51 +538,6 @@ def _test_global_pool2d(opfunc, reffunc):
         op_res1 = intrp1.evaluate(func)(data)
         tvm.testing.assert_allclose(op_res1.asnumpy(), ref_res, rtol=1e-5, atol=1e-5)
 
-def calculate_morph_dilation(a, k, r):
-    ##  a: input array
-    ##  k: kernel
-    ##  r: dilation_rate
-
-    k_dilated = dilate_python(k, r)  # dilate kernel as required
-    kern_rows = k_dilated.shape[0]
-    kern_cols = k_dilated.shape[1]
-    rows = a.shape[0]
-    columns = a.shape[1]
-
-    out = []
-
-    for i in range(rows - kern_rows + 1):
-        for j in range(columns - kern_cols + 1):
-            s = np.max(a[i:(i + kern_rows), j:(j + kern_cols)] + k_dilated)
-            out.append(s)
-
-    return (np.asarray(out).reshape(rows - kern_rows + 1, columns - kern_cols + 1))
-
-def dilate_python(input_np, dil_rate):
-    """Dilate operation.
-    Parameters
-    ----------
-    input_np : numpy.ndarray
-        n-D, can be any layout.
-    dil_rate : dilation rate
-    Returns
-    -------
-    output_np : numpy.ndarray
-        n-D, the same layout as Input.
-    """
-    n = len(input_np.shape)
-    assert len(dil_rate) == n, \
-        "Input dimension and dil_rate size dismatch : %d vs %d" %(n, len(dil_rate))
-    output_size = ()
-    no_zero = ()
-    for i in range(n):
-        output_size += ((input_np.shape[i]-1)*dil_rate[i]+1,)
-        no_zero += ((range(0, output_size[i], dil_rate[i])),)
-    output_np = np.zeros(shape=output_size)
-    output_np[np.ix_(*no_zero)] = input_np
-
-    return output_np
-
 def test_pool2d():
     _test_pool2d(relay.nn.max_pool2d, np.max)
     _test_pool2d(relay.nn.avg_pool2d, np.mean)

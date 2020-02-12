@@ -2879,8 +2879,8 @@ def _test_forward_readVariableOp(input_x):
     with tf.compat.v1.Session() as sess:
         #sess.run(init)
         print("TF Session print:", sess.run(init))
-        #writer = tf.summary.FileWriter('./graphs', sess.graph)
-        #writer.close()
+        writer = tf.summary.FileWriter('./graphs', sess.graph)
+        writer.close()
         final_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
             sess,
             sess.graph.as_graph_def(add_shapes=True),

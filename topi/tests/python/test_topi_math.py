@@ -102,7 +102,7 @@ def test_ewise():
         if check_round:
             a_np += ((np.abs(np.fmod(a_np, 1)) - 0.5) < 1e-6) * 1e-5
         b_np = np.isnan(a_np)
-        
+
         def check_device(device):
             ctx = tvm.context(device, 0)
             if not ctx.exist:
