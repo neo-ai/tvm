@@ -538,6 +538,7 @@ def _test_global_pool2d(opfunc, reffunc):
         op_res1 = intrp1.evaluate(func)(data)
         tvm.testing.assert_allclose(op_res1.asnumpy(), ref_res, rtol=1e-5, atol=1e-5)
 
+
 def test_pool2d():
     _test_pool2d(relay.nn.max_pool2d, np.max)
     _test_pool2d(relay.nn.avg_pool2d, np.mean)
