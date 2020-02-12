@@ -1409,14 +1409,17 @@ def _add_n():
         return  _res
     return _impl
 
-def _ReadVariableOp(inputs, attrs):
-    return inputs[0]
+def _ReadVariableOp():
+    def _impl(inputs, attrs):
+        return inputs[0]
+    return _impl
 
-def _AssignVariableOp(inputs, attr, params):
-
-    assert len(inputs) == 2 , "add_n take >=1 inputs, but 0 given."
-    inputs[0] = inputs[1]
-    return inputs[0]
+def _AssignVariableOp():
+    def _impl(inputs, attr, params):
+        assert len(inputs) == 2 , "add_n take >=1 inputs, but 0 given."
+        inputs[0] = inputs[1]
+        return inputs[0]
+    return _impl
 
 
 # compatible operators that do NOT require any conversion.
@@ -1502,8 +1505,8 @@ _convert_map = {
     'NotEqual'                          : _broadcast('not_equal'),
     'OneHot'                            : _one_hot(),
     'Pack'                              : _pack(),
-    'ReadVariableOp'                    : _ReadVariableOp,
-    'AssignVariableOp'                  : _AssignVariableOp,
+    'ReadVariableOp'                    : _ReadVariableOp(),
+    'AssignVariableOp'                  : _AssignVariableOp(),
     'TensorArrayV3'                     : _tensor_array(),
     'TensorArrayScatterV3'              : _tensor_array_scatter(),
     'TensorArrayGatherV3'               : _tensor_array_gather(),
