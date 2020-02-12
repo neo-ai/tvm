@@ -30,7 +30,6 @@ from .conv1d_transpose_ncw_python import conv1d_transpose_ncw_python
 from .deformable_conv2d_nchw_python import deformable_conv2d_nchw_python
 from .depthwise_conv2d_python import depthwise_conv2d_python_nchw, depthwise_conv2d_python_nhwc
 from .dilate_python import dilate_python
-from .dilation2d_python import dilation2d_python
 from .softmax_python import softmax_python, log_softmax_python
 from .upsampling_python import upsampling_python, upsampling3d_python
 from .bilinear_resize_python import bilinear_resize_python

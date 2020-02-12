@@ -32,6 +32,9 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import variables
 from tensorflow.python.ops import init_ops
+from tensorflow.python.training.tracking import tracking
+import tensorflow.keras.backend as K
+from tensorflow.python.eager import def_function
 from distutils.version import LooseVersion
 import tvm
 from tvm import relay
@@ -2864,46 +2867,40 @@ def test_forward_add_n():
     _test_forward_add_n(in4)
     _test_forward_add_n(in5)
 #######################################################################
-#Dilation2d
-def _test_dilation2d(opname, tensor_in_sizes, filter_in_sizes,
-                     strides, rates, padding,
-                     deconv_output_shape=[]):
-    """ One iteration of dilation2d with given shapes and attributes """
+#readVariableOp
+def _test_forward_readVariableOp(input_x):
+    # input_x is (12, 4)
+    _in = K.variable(input_x, name='input')
 
-    total_size_1 = np.prod(tensor_in_sizes)
-    total_size_2 = np.prod(filter_in_sizes)
-    # Initializes the input tensor with array containing incrementing
-    # numbers from 1.
-    data_array = [f * 1.0 for f in range(1, total_size_1 + 1)]
-    filter_array = [f * 1.0 for f in range(1, total_size_2 + 1)]
+    W = K.variable(np.random.normal(size=(3, 4, 1)), name='weight')
+    # W.T*x
+    linear_out = K.squeeze(K.batch_dot(K.permute_dimensions(W, (0, 2, 1)), _in), axis=-1)
+    init = tf.compat.v1.global_variables_initializer()
+    with tf.compat.v1.Session() as sess:
+        sess.run(init)
+        writer = tf.summary.FileWriter('./graphs', sess.graph)
+        print(sess.run(init))
+        #writer = tf.summary.FileWriter('./graphs', sess.graph._nodes_by_id)
+        #writer = tf.summary.FileWriter('./graphs', sess.graph._nodes_by_name)
+        writer.close()
+        final_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
+            sess,
+            sess.graph.as_graph_def(add_shapes=True),
+            ["init"]
+        )
+    print("Final Graph Def:", final_graph_def)
+    tvm_output = run_tvm_graph(final_graph_def, [], [],
+                               target="llvm", out_names=None)
+    print("TVM output: ", tvm_output)
 
-    with tf.Graph().as_default():
-        in_data = array_ops.placeholder(shape=tensor_in_sizes, dtype='float32')
-        in_filter = constant_op.constant(
-            filter_array, shape=filter_in_sizes, dtype='float32')
+def test_forward_readVariableOp():
+    _test_forward_readVariableOp(np.random.random(size=(3, 4, 1)))
 
-        if opname == 'dil2d':
-            nn_ops.dilation2d(in_data,
-                              in_filter,
-                              strides=strides,
-                              rates=rates,
-                              padding=padding)
-
-            compare_tf_with_tvm(np.reshape(data_array, tensor_in_sizes).astype('float32'),
-                                'Placeholder:0', 'dilation2D:0')
-
-
-def test_forward_dilation():
-    if is_gpu_available():
-        _test_dilation2d('dil2d', [1, 5, 5, 3], [1, 3, 3, 3], [1, 1, 1, 1], [1, 1, 1, 1], "VALID")
-        _test_dilation2d('dil2d', [1, 5, 5, 3], [1, 3, 3, 3], [1, 1, 1, 1], [1, 2, 2, 1], "VALID")
-        _test_dilation2d('dil2d', [1, 5, 5, 3], [1, 3, 3, 3], [1, 1, 1, 1], [1, 1, 1, 1], "SAME")
-        _test_dilation2d('dil2d', [1, 28, 28, 3], [1, 5, 5, 3], [1, 2, 2, 1], [1, 1, 1, 1], "VALID")
 #######################################################################
 # Main
 # ----
 if __name__ == '__main__':
-
+    test_forward_readVariableOp()
     # Transforms
     test_forward_slice()
     test_forward_transpose()
@@ -3015,4 +3012,3 @@ if __name__ == '__main__':
     test_forward_where()
     test_forward_matmul()
     test_forward_batch_matmul()
-

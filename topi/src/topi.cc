@@ -872,12 +872,4 @@ TVM_REGISTER_GENERIC_FUNC(dense)
 }))
 .register_func({ "cuda", "gpu" }, WrapDenseOp(topi::cuda::dense_cuda))
 .register_func({ "rocm" }, WrapDenseOp(topi::rocm::dense_rocm));
-/*
-TVM_REGISTER_GLOBAL("topi.nn.dilation2d")
-.set_body([](TVMArgs args, TVMRetValue *rv) {
-  *rv =  topi::nn::dilation2d(args[0], args[1], args[2], args[3],
-                   static_cast<nn::PoolType>(static_cast<int>(args[4])),
-                   args[5], args[6], args[7]);
-  });
-*/
 }  // namespace topi
