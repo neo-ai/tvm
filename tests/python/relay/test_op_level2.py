@@ -987,7 +987,6 @@ def test_bitpack_infer_type():
 
 
 if __name__ == "__main__":
-
     test_pool2d()
     test_pool3d()
     test_avg_pool2d_no_count_pad()
