@@ -1416,11 +1416,10 @@ def _ReadVariableOp():
 
 def _AssignVariableOp():
     def _impl(inputs, attr, params):
-        assert len(inputs) == 2 , "add_n take >=1 inputs, but 0 given."
+        assert len(inputs) == 2, "AssignVariableOp take 2 params"
         inputs[0] = inputs[1]
         return inputs[0]
     return _impl
-
 
 # compatible operators that do NOT require any conversion.
 _identity_list = []
