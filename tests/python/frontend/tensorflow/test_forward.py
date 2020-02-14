@@ -31,8 +31,6 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import variables
-from tensorflow.python.ops import init_ops
-from tensorflow.python.training.tracking import tracking
 import tensorflow.keras.backend as K
 from tensorflow.python.eager import def_function
 from distutils.version import LooseVersion
