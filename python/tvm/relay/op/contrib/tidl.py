@@ -341,10 +341,22 @@ def _concatenate_whitelist_fn(attrs, args):
     supported = (attrs.axis == 1) or (attrs.axis == 3)
     return supported
 
+def get_conv2d_num_channels(kernel_layout, weight_shape):
+    """ Get number of input and output channels of conv2d """
+    if kernel_layout == 'OIHW':
+        (num_in_channels, num_out_channels) = (weight_shape[1], weight_shape[0])
+    elif kernel_layout == 'HWIO':
+        (num_in_channels, num_out_channels) = (weight_shape[2], weight_shape[3])
+    else: # 'HWOI'
+        (num_in_channels, num_out_channels) = (weight_shape[3], weight_shape[2])
+    return (num_in_channels, num_out_channels)
+
 @tvm.ir.register_op_attr("nn.conv2d", "target.tidl")
 def _conv2d_whitelist_fn(attrs, args):
     weight = args[1]
     if weight.checked_type.dtype != 'float32':
+        return False
+    if attrs.kernel_layout not in ('OIHW', 'HWIO', 'HWOI'):
         return False
 
     weight_shape = weight.data.shape
@@ -355,24 +367,26 @@ def _conv2d_whitelist_fn(attrs, args):
 
     (dh, dw) = dilation
     (kh, kw) = kernel_size
-    channel_supported = (weight_shape[0] <= 2048 and weight_shape[1] <= 2048)
+    (num_in_chs, num_out_chs) = get_conv2d_num_channels(attrs.kernel_layout, weight_shape)
+    channel_supported = (num_in_chs <= 2048 and num_out_chs <= 2048)
     stride_supported = (strides[0] <= 2 and strides[1] <= 2)
     dilation_supported = (dh in (1, 2, 4)) and (dw in (1, 2, 4))
     kernel_supported = (((kh-1)*dh+1) <= 9) and (((kw-1)*dw+1) <= 9)
     groups_supported = (groups <= 1024)
     supported = channel_supported and stride_supported and dilation_supported \
                 and kernel_supported and groups_supported
-
     return supported
 
 @tvm.ir.register_op_attr("nn.conv2d_transpose", "target.tidl")
 def _conv2d_transpose_whitelist_fn(attrs, args):
+    if attrs.kernel_layout not in ('OIHW', 'HWIO', 'HWOI'):
+        return False
     weight = args[1]
     weight_shape = weight.data.shape
     strides = get_const_tuple(attrs.strides)
     groups = attrs.groups
-    supported = (weight_shape[0] == weight_shape[1]) and (weight_shape[0] == groups) \
-                and (strides[1] == 2)
+    (num_in_chs, num_out_chs) = get_conv2d_num_channels(attrs.kernel_layout, weight_shape)
+    supported = (num_in_chs == num_out_chs) and (num_in_chs == groups) and (strides[1] == 2)
     return supported
 
 @tvm.ir.register_op_attr("nn.dense", "target.tidl")
