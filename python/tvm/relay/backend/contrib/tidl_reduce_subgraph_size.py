@@ -205,9 +205,8 @@ class SubgraphReducer(ExprMutator):
                 elif isinstance(last_op, tvm.relay.expr.Call):
                     last_op_args = last_op.args
                 elif isinstance(last_op, tvm.relay.expr.TupleGetItem):
-                    last_op_arg = []
                     for arg in last_op.tuple_value.args:
-                        last_op_arg.append(arg)
+                        last_op_args.append(arg)
                 else:
                     raise ValueError("Last op is not Call, Tuple, or TupleGetItem")
                 # Gather new outputs of the subgraph - from removed op's inputs

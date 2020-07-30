@@ -22,5 +22,5 @@ if(USE_TIDL STREQUAL "ON")
 
   file(GLOB TIDL_CONTRIB_SRC src/runtime/contrib/tidl/*.cc)
   list(APPEND RUNTIME_SRCS ${TIDL_CONTRIB_SRC})
-endif(USE_TIDL)
+endif()
 
