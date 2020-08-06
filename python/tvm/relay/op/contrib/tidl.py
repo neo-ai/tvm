@@ -31,20 +31,6 @@ def _merge_sequential_ops(mod):
         reshape_out = is_op('reshape')(squeeze_out, wildcard())
         return reshape_out
 
-    #tranpose has to be preceded and followed by reshape
-    #TODO: add import of op 'transpose' and uncomment 2 patterns below
-    #def _transpose_reshape_pattern():
-    #    reshape_out1 = is_op('reshape')(wildcard(), wildcard())
-    #    transpose_out = is_op('transpose')(reshape_out1)
-    #    reshape_out2 = is_op('reshape')(transpose_out, wildcard())
-    #    return reshape_out2
-
-    #tranpose has to be followed by batch_flatten
-    #def _transpose_batch_flatten_pattern():
-    #    transpose_out = is_op('transpose')(wildcard())
-    #    batch_flatten_out = is_op('nn.batch_flatten')(transpose_out)
-    #    return batch_flatten_out
-
     #reshape has to be preceded by avg_pool2d, global_avg_pool2d, dense
     def _reshape_avg_pool_pattern():
         avg_pool_out = is_op('nn.avg_pool2d')(wildcard())
@@ -79,123 +65,178 @@ def _merge_sequential_ops(mod):
         softmax_out = is_op('nn.softmax')(reshape_out)
         return softmax_out
 
-    #relu has to be preceded by conv2d
-    def _conv2d_relu_pattern():
-        conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
-        relu_out = is_op('nn.relu')(conv2d_out)
-        return relu_out
-
-    def _conv2d_relu_checker(extract):
-        conv2d_op = extract.args[0]
-        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args)
-
-    #relu has to be preceded by conv2d and bias_add
-    def _conv2d_bias_relu_pattern():
-        conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
-        bias_out = is_op('nn.bias_add')(conv2d_out, is_constant())
-        relu_out = is_op('nn.relu')(bias_out)
-        return relu_out
-
-    def _conv2d_bias_relu_checker(extract):
-        conv2d_op = extract.args[0].args[0]
-        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args)
-
-    #relu has to be preceded by conv2d and bias_add
-    def _conv2d_add_relu_pattern():
-        conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
-        add_out = is_op('add')(conv2d_out, is_constant())
-        relu_out = is_op('nn.relu')(add_out)
-        return relu_out
-
-    def _conv2d_add_relu_checker(extract):
-        conv2d_op = extract.args[0].args[0]
-        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args)
-
     #bias_add has be preceded by conv2d
     def _conv2d_bias_pattern():
         conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
         bias_out = is_op('nn.bias_add')(conv2d_out, is_constant())
         return bias_out
-
     def _conv2d_bias_checker(extract):
         conv2d_op = extract.args[0]
         return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args)
-
-    #bias_add has be preceded by conv2d
     def _conv2d_add_pattern():
         conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
         add_out = is_op('add')(conv2d_out, is_constant())
         return add_out
-
     def _conv2d_add_checker(extract):
         conv2d_op = extract.args[0]
         return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args)
 
-    #pad has be preceded by conv2d
-    def _conv2d_pad_pattern():
+    #pad has to precede conv2d, (conv2d, bias_add), or (conv2d, add)
+    def _pad_checker(pad_op):
+        pad_supported = (float(pad_op.attrs.pad_value) == 0.0 and \
+                         pad_op.attrs.pad_mode == 'constant')
+        return pad_supported
+
+    def _pad_conv2d_pattern():
+        pad_out = is_op('nn.pad')(wildcard())
+        conv2d_out = is_op('nn.conv2d')(pad_out, is_constant())
+        return conv2d_out
+
+    def _pad_conv2d_checker(extract):
+        pad_supported = _pad_checker(extract.args[0])
+        return _conv2d_whitelist_fn(extract.attrs, extract.args) and pad_supported
+
+    def _pad_conv2d_bias_pattern():
+        pad_conv2d_out = _pad_conv2d_pattern()
+        bias_out = is_op('nn.bias_add')(pad_conv2d_out, is_constant())
+        return bias_out
+
+    def _pad_conv2d_bias_checker(extract):
+        pad_supported = _pad_checker(extract.args[0].args[0])
+        conv2d_bias_supported = _conv2d_bias_checker(extract)
+        return conv2d_bias_supported and pad_supported
+
+    def _pad_conv2d_add_pattern():
+        pad_conv2d_out = _pad_conv2d_pattern()
+        add_out = is_op('add')(pad_conv2d_out, is_constant())
+        return add_out
+
+    def _pad_conv2d_add_checker(extract):
+        pad_supported = _pad_checker(extract.args[0].args[0])
+        conv2d_add_supported = _conv2d_add_checker(extract)
+        return conv2d_add_supported and pad_supported
+
+    #relu6 has to be preceded by conv2d or (conv2d, bias_add)
+    def _relu6_check_fun(attrs): # clip(0, 6) is not supported standalone
+        supported = (float(attrs.a_min) == 0.0) and (float(attrs.a_max) == 6.0)
+        return supported
+
+    def _conv2d_relu6_pattern():
         conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
-        pad_out = is_op('nn.pad')(conv2d_out)
-        return pad_out
+        relu6_out = is_op('clip')(conv2d_out)
+        return relu6_out
 
-    def _conv2d_pad_checker(extract):
-        pad_supported = (float(extract.attrs.pad_value) == 0.0 and \
-                         extract.attrs.pad_mode == 'constant')
+    def _conv2d_relu6_checker(extract):
+        relu6_supported = _relu6_check_fun(extract.attrs)
         conv2d_op = extract.args[0]
-        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args) and pad_supported
+        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args) and relu6_supported
 
-    #relu has to be preceded by batch_norm, add, dense
-    def _bn_relu_pattern():
-        bn_out = is_op('nn.batch_norm')(wildcard(), wildcard(), wildcard(), wildcard(), wildcard())
-        tuple_get_item_node = is_tuple_get_item(bn_out, 0)
-        relu_out = is_op('nn.relu')(tuple_get_item_node)
-        return relu_out
+    def _conv2d_bias_relu6_pattern():
+        conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
+        bias_out = is_op('nn.bias_add')(conv2d_out, is_constant())
+        relu6_out = is_op('clip')(bias_out)
+        return relu6_out
 
-    def _bn_relu_checker(extract):
-        bn_op = extract.args[0].tuple_value
-        return _batch_norm_whitelist_fn(bn_op.attrs, bn_op.args)
+    def _conv2d_bias_relu6_checker(extract):
+        relu6_supported = _relu6_check_fun(extract.attrs)
+        conv2d_op = extract.args[0].args[0]
+        return _conv2d_whitelist_fn(conv2d_op.attrs, conv2d_op.args) and relu6_supported
 
-    def _add_relu_pattern():
+    def _conv2d_add_relu6_pattern():
+        conv2d_out = is_op('nn.conv2d')(wildcard(), is_constant())
+        # 'add' must be 'bias_add' in (conv2d, add, relu6) pattern
+        bias_add_out = is_op('add')(conv2d_out, is_constant())
+        relu6_out = is_op('clip')(bias_add_out)
+        return relu6_out
+
+    def _conv2d_add_relu6_checker(extract):
+        return _conv2d_bias_relu6_checker(extract)
+
+    #relu6 has to be preceded by element-wise add, batch_norm, or dense
+    def _add_relu6_pattern():
+        # add must be element-wise add
         add_out = is_op('add')(wildcard(), wildcard())
-        relu_out = is_op('nn.relu')(add_out)
-        return relu_out
+        relu6_out = is_op('clip')(add_out)
+        return relu6_out
 
-    def _add_relu_checker(extract):
-        add = extract.args[0]
-        if any([isinstance(arg, tvm.relay.expr.Constant) for arg in add.args]):
-            # Can't add constant unless used like bias_add in a pattern such as "conv2d_add_relu".
-            return False
-        return True
+    def _add_relu6_checker(extract):
+        relu6_supported = _relu6_check_fun(extract.attrs)
+        return relu6_supported
 
-    def _dense_relu_pattern():
+    def _bn_relu6_pattern():
+        bn_out = is_op('nn.batch_norm')(wildcard(), wildcard(), wildcard(), wildcard(),
+                                        wildcard())
+        tuple_get_item_node = is_tuple_get_item(bn_out, 0)
+        relu6_out = is_op('clip')(tuple_get_item_node)
+        return relu6_out
+
+    def _bn_relu6_checker(extract):
+        relu6_supported = _relu6_check_fun(extract.attrs)
+        bn_op = extract.args[0].tuple_value
+        return _batch_norm_whitelist_fn(bn_op.attrs, bn_op.args) and relu6_supported
+
+    def _dense_relu6_pattern():
         dense_out = is_op('nn.dense')(wildcard(), is_constant())
-        relu_out = is_op('nn.relu')(dense_out)
-        return relu_out
+        relu6_out = is_op('clip')(dense_out)
+        return relu6_out
 
-    def _dense_relu_checker(extract):
+    def _dense_relu6_checker(extract):
+        relu6_supported = _relu6_check_fun(extract.attrs)
         dense_op = extract.args[0]
-        return _dense_whitelist_fn(dense_op.attrs, dense_op.args)
+        return _dense_whitelist_fn(dense_op.attrs, dense_op.args) and relu6_supported
 
-    #relu has to be preceded by dense and bias_add
-    def _dense_bias_relu_pattern():
+    #relu6 can also be preceded by (dense, bias_add): 
+    #  (dense, bias_add, relu6) -> (dense, relu6) -> dense
+    def _dense_bias_relu6_pattern():
         dense_out = is_op('nn.dense')(wildcard(), is_constant())
         bias_out = is_op('nn.bias_add')(dense_out, is_constant())
-        relu_out = is_op('nn.relu')(bias_out)
-        return relu_out
+        relu6_out = is_op('clip')(bias_out)
+        return relu6_out
 
-    def _dense_bias_relu_checker(extract):
+    def _dense_bias_relu6_checker(extract):
         dense_op = extract.args[0].args[0]
-        return _dense_whitelist_fn(dense_op.attrs, dense_op.args)
+        relu6_supported = _relu6_check_fun(extract.attrs)
+        dense_supported = _dense_whitelist_fn(dense_op.attrs, dense_op.args)
+        return relu6_supported and dense_supported
 
-    #relu has to be preceded by dense and bias_add
-    def _dense_add_relu_pattern():
+    def _dense_add_relu6_pattern():
         dense_out = is_op('nn.dense')(wildcard(), is_constant())
-        add_out = is_op('add')(dense_out, is_constant())
-        relu_out = is_op('nn.relu')(add_out)
-        return relu_out
+        bias_add_out = is_op('add')(dense_out, is_constant())
+        relu6_out = is_op('clip')(bias_add_out)
+        return relu6_out
 
-    def _dense_add_relu_checker(extract):
-        dense_op = extract.args[0].args[0]
-        return _dense_whitelist_fn(dense_op.attrs, dense_op.args)
+    def _dense_add_relu6_checker(extract):
+        return _dense_bias_relu6_checker(extract)
+
+    def _pad_conv2d_relu6_pattern():
+        _pad_conv2d_out = _pad_conv2d_pattern()
+        relu6_out = is_op('clip')(_pad_conv2d_out)
+        return relu6_out
+
+    def _pad_conv2d_relu6_checker(extract):
+        pad_op = extract.args[0].args[0]
+        pad_supported = _pad_checker(pad_op)
+        return pad_supported and _conv2d_relu6_checker(extract)
+
+    def _pad_conv2d_bias_relu6_pattern():
+        _pad_conv2d_bias_out = _pad_conv2d_bias_pattern()
+        relu6_out = is_op('clip')(_pad_conv2d_bias_out)
+        return relu6_out
+
+    def _pad_conv2d_bias_relu6_checker(extract):
+        pad_op = extract.args[0].args[0].args[0]
+        pad_supported = _pad_checker(pad_op)
+        return pad_supported and _conv2d_bias_relu6_checker(extract)
+
+    def _pad_conv2d_add_relu6_pattern():
+        _pad_conv2d_add_out = _pad_conv2d_add_pattern()
+        relu6_out = is_op('clip')(_pad_conv2d_add_out)
+        return relu6_out
+
+    def _pad_conv2d_add_relu6_checker(extract):
+        pad_op = extract.args[0].args[0].args[0]
+        pad_supported = _pad_checker(pad_op)
+        return pad_supported and _conv2d_add_relu6_checker(extract)
 
     #bias_add has to be preceded by dense
     def _dense_bias_pattern():
@@ -219,25 +260,29 @@ def _merge_sequential_ops(mod):
 
     pattern_table = [
         ('tidl.squeeze_reshape', _squeeze_reshape_pattern()),
-        #TODO: add import of op 'transpose' and uncomment 2 items below
-        #('tidl.transpose_reshape', _transpose_reshape_pattern()),
-        #('tidl.tanspose_batch_flatten', _transpose_batch_flatten_pattern()),
         ('tidl.reshape_avgpool', _reshape_avg_pool_pattern(), _reshape_avg_pool_checker),
         ('tidl.reshape_globalavgpool', _reshape_global_avg_pool_pattern(),
-         _reshape_global_avg_pool_checker),
+                                       _reshape_global_avg_pool_checker),
         ('tidl.reshape_dense', _reshape_dense_pattern(), _reshape_dense_checker),
         ('tidl.reshape_softmax', _reshape_softmax_pattern()),
-        ('tidl.conv2d_relu', _conv2d_relu_pattern(), _conv2d_relu_checker),
-        ('tidl.conv2d_bias_relu', _conv2d_bias_relu_pattern(), _conv2d_bias_relu_checker),
-        ('tidl.conv2d_add_relu', _conv2d_add_relu_pattern(), _conv2d_add_relu_checker),
+        ('tidl.pad_conv2d_bias_relu6', _pad_conv2d_bias_relu6_pattern(),
+                                      _pad_conv2d_bias_relu6_checker),
+        ('tidl.pad_conv2d_add_relu6', _pad_conv2d_add_relu6_pattern(),
+                                      _pad_conv2d_add_relu6_checker),
+        ('tidl.pad_conv2d_relu6', _pad_conv2d_relu6_pattern(), _pad_conv2d_relu6_checker),
+        ('tidl.pad_conv2d_bias', _pad_conv2d_bias_pattern(), _pad_conv2d_bias_checker),
+        ('tidl.pad_conv2d_add', _pad_conv2d_add_pattern(), _pad_conv2d_add_checker),
+        ('tidl.conv2d_bias_relu6', _conv2d_bias_relu6_pattern(), _conv2d_bias_relu6_checker),
+        ('tidl.conv2d_add_relu6', _conv2d_add_relu6_pattern(), _conv2d_add_relu6_checker),
+        ('tidl.dense_bias_relu6', _dense_bias_relu6_pattern(), _dense_bias_relu6_checker),
+        ('tidl.dense_add_relu6', _dense_add_relu6_pattern(), _dense_add_relu6_checker),
         ('tidl.conv2d_bias', _conv2d_bias_pattern(), _conv2d_bias_checker),
         ('tidl.conv2d_add', _conv2d_add_pattern(), _conv2d_add_checker),
-        ('tidl.conv2d_pad', _conv2d_pad_pattern(), _conv2d_pad_checker),
-        ('tidl.bn_relu', _bn_relu_pattern(), _bn_relu_checker),
-        ('tidl.add_relu', _add_relu_pattern(), _add_relu_checker),
-        ('tidl.dense_relu', _dense_relu_pattern(), _dense_relu_checker),
-        ('tidl.dense_bias_relu', _dense_bias_relu_pattern(), _dense_bias_relu_checker),
-        ('tidl.dense_add_relu', _dense_add_relu_pattern(), _dense_add_relu_checker),
+        ('tidl.conv2d_relu6', _conv2d_relu6_pattern(), _conv2d_relu6_checker),
+        ('tidl.pad_conv2d', _pad_conv2d_pattern(), _pad_conv2d_checker),
+        ('tidl.dense_relu6', _dense_relu6_pattern(), _dense_relu6_checker),
+        ('tidl.add_relu6', _add_relu6_pattern(), _add_relu6_checker),
+        ('tidl.bn_relu6', _bn_relu6_pattern(), _bn_relu6_checker),
         ('tidl.dense_bias', _dense_bias_pattern(), _dense_bias_checker),
         ('tidl.dense_add', _dense_add_pattern(), _dense_add_checker),
     ]
@@ -297,10 +342,8 @@ def _bias_add_whitelist_fn(attrs, args):
 
 @tvm.ir.register_op_attr("clip", "target.tidl")
 def _clip_whitelist_fn(attrs, args):
-    a_min = attrs.a_min
-    a_max = attrs.a_max
-    supported = (a_min == 0 and a_max == 6)
-    return supported
+    # standalone "clip" is not supported
+    return False
 
 @tvm.ir.register_op_attr("concatenate", "target.tidl")
 def _concatenate_whitelist_fn(attrs, args):
@@ -391,11 +434,13 @@ def _max_pool_whitelist_fn(attrs, args):
                 and (strides[1] <= 2)
     return supported
 
-@tvm.ir.register_op_attr("multiply", "target.tidl")
-def _multiply_whitelist_fn(attrs, args):
-    #supported = True
-    supported = False
-    return supported
+@tvm.ir.register_op_attr("max", "target.tidl")
+def _max_whitelist_fn(attrs, args):
+    return True
+
+@tvm.ir.register_op_attr("mean", "target.tidl")
+def _mean_whitelist_fn(attrs, args):
+    return True
 
 @tvm.ir.register_op_attr("nn.nms", "target.tidl")
 def _nms_whitelist_fn(attrs, args):
@@ -409,14 +454,7 @@ def _pad_whitelist_fn(attrs, args):
 
 @tvm.ir.register_op_attr("nn.relu", "target.tidl")
 def _relu_whitelist_fn(attrs, args):
-    # Standalone relu is not supported.
-    return False
-
-@tvm.ir.register_op_attr("nn.slice_like", "target.tidl")
-def _slice_like_whitelist_fn(attrs, args):
-    #supported = (attrs.axis == 1)
-    supported = False
-    return supported
+    return True
 
 @tvm.ir.register_op_attr("nn.softmax", "target.tidl")
 def _softmax_whitelist_fn(attrs, args):

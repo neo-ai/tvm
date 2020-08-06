@@ -57,7 +57,7 @@ def find_data_layout(mod):
 def find_in_nodes(all_nodes, this_node, input_prefix):
     r""" Find the input nodes of a given relay.expr.Call node.
 
-         Only find input nodes that are relay.expr.Call.
+         Only find input nodes that are relay.expr.Call or Tuple.
          If an input node is a relay.expr.TupleGetItem, then check this input
          node's input node.
 
@@ -65,8 +65,8 @@ def find_in_nodes(all_nodes, this_node, input_prefix):
     ----------
     all_nodes : dictionary
         Dictionary of all nodes of the graph
-    this_node : relay.expr.Call
-        A relay.expr.Call node whose input nodes are to be found by this function
+    this_node : relay.expr.Call or relay.expr.Tuple
+        A relay.expr.Call or Tuple node whose input nodes are to be found by this function
     input_prefix : string
         Prefix of input tensor name, e.g. "tidl" when target is "tidl"
 
@@ -79,7 +79,7 @@ def find_in_nodes(all_nodes, this_node, input_prefix):
     input_nodes = []
     if isinstance(this_node, relay.expr.Call):
         in_nodes = this_node.args
-    elif isinstance(this_node, relay.expr.Tuple):
+    else: # this_node is relay.expr.Tuple)
         in_nodes = this_node.fields
 
     for node in in_nodes:
@@ -96,7 +96,6 @@ def find_in_nodes(all_nodes, this_node, input_prefix):
         #else: ignore all other types of nodes: var, const, etc.
 
     return input_nodes
-
 
 def find_out_nodes(all_nodes, this_node):
     r""" Find the output nodes of a given relay.expr.Call node.
@@ -681,9 +680,6 @@ class PoolingParams(ctypes.Structure):
                 ('pad_h', ctypes.c_int),
                 ('pad_w', ctypes.c_int)]
 
-class MulParams(ctypes.Structure):
-    _fields_ = [('scale', ctypes.c_float)]
-
 class InOutNodes(ctypes.Structure):
     """ Input/output nodes defined in ctypes for passing to TIDL C library """
     _fields_ = [('this_node', ctypes.c_int),
@@ -713,7 +709,7 @@ class TIDLImport:
         self.tidl_target = tidl_target
         self.data_layout = data_layout
 
-    def tidl_import_conv2d(self, this_node, params):
+    def tidl_import_conv2d(self, this_node):
         r""" Import conv2d operator to TIDL
             There is an example how to get the attributes of conv2d in Relay:
             https://github.com/dmlc/tvm/blob/master/python/tvm/relay/op/nn/_nn.py#L144
@@ -759,13 +755,8 @@ class TIDLImport:
         (conv2d_params.kernel_h, conv2d_params.kernel_w) = kernel_size
         conv2d_params.num_groups = groups
 
-        # Obtain weights from Relay params
-        if isinstance(weight, tvm.relay.expr.Constant):
-            weights = weight.data
-        else:
-            weight_name = weight.name_hint
-            weights = params[weight_name]
-        # Convert to numpy array and then pass to C
+        # Obtain weights and convert to numpy array and then pass to C lib
+        weights = weight.data
         weights_np = weights.asnumpy()
 
         if kernel_layout == 'OIHW':
@@ -888,7 +879,7 @@ class TIDLImport:
                         ctypes.c_void_p(bias_params_np.ctypes.data))
         return True
 
-    def tidl_import_batch_norm(self, node, params):
+    def tidl_import_batch_norm(self, node):
         r""" Import batch_norm operator to TIDL
             https://docs.tvm.ai/langref/relay_op.html#tvm.relay.nn.batch_norm
             https://docs.tvm.ai/doxygen/structtvm_1_1relay_1_1BatchNormAttrs.html
@@ -913,17 +904,10 @@ class TIDLImport:
             return False
         bn_params.num_params = node.args[1].checked_type.shape[0]
 
-        # Obtain weights from Relay params
-        if isinstance(node.args[1], tvm.relay.expr.Constant):
-            gama = node.args[1].data.asnumpy()
-            beta = node.args[2].data.asnumpy()
-            mean = node.args[3].data.asnumpy()
-            var = node.args[4].data.asnumpy()
-        else:
-            gama = params[node.args[1].name_hint].asnumpy()
-            beta = params[node.args[2].name_hint].asnumpy()
-            mean = params[node.args[3].name_hint].asnumpy()
-            var = params[node.args[4].name_hint].asnumpy()
+        gama = node.args[1].data.asnumpy()
+        beta = node.args[2].data.asnumpy()
+        mean = node.args[3].data.asnumpy()
+        var = node.args[4].data.asnumpy()
         bn_params.gama = gama.ctypes.data
         bn_params.beta = beta.ctypes.data
         bn_params.mean = mean.ctypes.data
@@ -1000,15 +984,22 @@ class TIDLImport:
         import_lib_dense(num_innodes, num_outnodes, ctypes.c_void_p(weights_array.ctypes.data))
         return True
 
-    def tidl_import_mul(self, this_node):
+    def tidl_import_max_mean(self, node):
+        r""" Import 'max' or 'mean' operator to TIDL pooling layer
+        """
 
-        mul_params = MulParams()
-        scale = this_node.args[0].data.asnumpy()
-        mul_params.scale = np.amax(scale)
-        import_lib_mul = self.import_lib.tidlImportMul
-        import_lib_mul.argtypes = (ctypes.POINTER(MulParams), ctypes.c_void_p)
-        import_lib_mul.restype = None
-        import_lib_mul(mul_params, ctypes.POINTER(ctypes.c_int)())
+        pooling_params = PoolingParams()
+        pooling_params.kernel_h = pooling_params.kernel_w = 0
+        pooling_params.pad_h = pooling_params.pad_w = 0
+        pooling_params.stride_h = pooling_params.stride_w = 1
+        if node.op.name == "max":
+            pooling_type = b'max_pool2d'
+        else:
+            pooling_type = b'avg_pool2d'
+        import_lib_pooling = self.import_lib.tidlImportPooling
+        import_lib_pooling.argtypes = (ctypes.POINTER(PoolingParams), ctypes.c_char_p)
+        import_lib_pooling.restype = None
+        import_lib_pooling(pooling_params, pooling_type)
         return True
 
     def tidl_import_init(self, input_scale, input_signed, input_shape):
@@ -1086,7 +1077,7 @@ class TIDLImport:
 
         status = True
         if this_node.op.name == 'nn.conv2d':
-            status = self.tidl_import_conv2d(this_node, params)
+            status = self.tidl_import_conv2d(this_node)
         elif this_node.op.name == 'nn.pad':
             status = self.tidl_import_pad(this_node)
         elif this_node.op.name == 'add':
@@ -1107,7 +1098,7 @@ class TIDLImport:
             import_lib_relu.restype = None
             import_lib_relu(b'Relu')
         elif this_node.op.name == 'nn.batch_norm':
-            status = self.tidl_import_batch_norm(this_node, params)
+            status = self.tidl_import_batch_norm(this_node)
         elif this_node.op.name == 'nn.avg_pool2d':
             status = self.tidl_import_pooling(this_node)
         elif this_node.op.name == 'squeeze':
@@ -1141,10 +1132,12 @@ class TIDLImport:
             import_lib_flatten.argtype = None
             import_lib_flatten.restype = None
             import_lib_flatten()
-        elif this_node.op.name == 'multiply':
-            status = self.tidl_import_mul(this_node)
         elif this_node.op.name == 'nn.dense':
             status = self.tidl_import_dense(this_node)
+        elif this_node.op.name == 'max':
+            self.tidl_import_max_mean(this_node)
+        elif this_node.op.name == 'mean':
+            self.tidl_import_max_mean(this_node)
         else:
             print("Operator " + this_node.op.name + " is not supported by TIDL!")
             status = False
