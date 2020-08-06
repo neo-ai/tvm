@@ -185,7 +185,7 @@ def _merge_sequential_ops(mod):
         dense_op = extract.args[0]
         return _dense_whitelist_fn(dense_op.attrs, dense_op.args) and relu6_supported
 
-    #relu6 can also be preceded by (dense, bias_add): 
+    #relu6 can also be preceded by (dense, bias_add):
     #  (dense, bias_add, relu6) -> (dense, relu6) -> dense
     def _dense_bias_relu6_pattern():
         dense_out = is_op('nn.dense')(wildcard(), is_constant())
@@ -262,13 +262,13 @@ def _merge_sequential_ops(mod):
         ('tidl.squeeze_reshape', _squeeze_reshape_pattern()),
         ('tidl.reshape_avgpool', _reshape_avg_pool_pattern(), _reshape_avg_pool_checker),
         ('tidl.reshape_globalavgpool', _reshape_global_avg_pool_pattern(),
-                                       _reshape_global_avg_pool_checker),
+         _reshape_global_avg_pool_checker),
         ('tidl.reshape_dense', _reshape_dense_pattern(), _reshape_dense_checker),
         ('tidl.reshape_softmax', _reshape_softmax_pattern()),
         ('tidl.pad_conv2d_bias_relu6', _pad_conv2d_bias_relu6_pattern(),
-                                      _pad_conv2d_bias_relu6_checker),
+         _pad_conv2d_bias_relu6_checker),
         ('tidl.pad_conv2d_add_relu6', _pad_conv2d_add_relu6_pattern(),
-                                      _pad_conv2d_add_relu6_checker),
+         _pad_conv2d_add_relu6_checker),
         ('tidl.pad_conv2d_relu6', _pad_conv2d_relu6_pattern(), _pad_conv2d_relu6_checker),
         ('tidl.pad_conv2d_bias', _pad_conv2d_bias_pattern(), _pad_conv2d_bias_checker),
         ('tidl.pad_conv2d_add', _pad_conv2d_add_pattern(), _pad_conv2d_add_checker),

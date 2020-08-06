@@ -721,8 +721,6 @@ class TIDLImport:
             Dictionary of all relay.expr.Call nodes of the graph
         this_node : relay.expr.Call
             A relay.expr.Call node which is a conv2d operator
-        params : dict of str to tvm.NDArray
-            The parameter dict to be used by relay
 
         Returns
         -------
@@ -888,8 +886,6 @@ class TIDLImport:
         ----------
         node : relay.expr.Call
             A relay.expr.Call node which is a batch_norm operator
-        params : dict of str to tvm.NDArray
-            The parameter dict to be used by relay
 
         Returns
         -------
@@ -1058,7 +1054,7 @@ class TIDLImport:
 
         return True
 
-    def tidl_import_node(self, all_nodes, this_node, params):
+    def tidl_import_node(self, all_nodes, this_node):
         r""" Importing a given node (operator) to TIDL
             # https://docs.tvm.ai/langref/relay_op.html#relay-core-tensor-operators
 
@@ -1068,8 +1064,6 @@ class TIDLImport:
             Dictionary of all relay.expr.Call nodes of the graph
         this_node : relay.expr.Call
             A relay.expr.Call node which is to be imported
-        params : dict of str to tvm.NDArray
-            The parameter dict to be used by relay
 
         Returns
         True if import succeeds or False if import fails
@@ -1212,15 +1206,13 @@ class TIDLImport:
 
         return status
 
-    def import_relay_ir(self, mod, params, subgraph_tensors):
+    def import_relay_ir(self, mod, subgraph_tensors):
         r""" Relay IR import to TIDL
 
         Parameters
         ----------
         mod : tvm.relay.Module
             Relay IR graph with subgraphs
-        params : dict of str to tvm.NDArray
-            The parameter dict to be used by relay
         subgraph_tensors: dict
             Input/output tensors of subgraphs obtained from TVM graph execution
 
@@ -1276,7 +1268,7 @@ class TIDLImport:
             relay.analysis.post_order_visit(mod[tidl_subgraph], traverse_func)
             for node in all_nodes_tidl:
                 if isinstance(node, relay.expr.Call):
-                    result = self.tidl_import_node(all_nodes_tidl, node, params)
+                    result = self.tidl_import_node(all_nodes_tidl, node)
                     if not result:
                         return import_fail
 
@@ -1440,7 +1432,7 @@ class TIDLCompiler:
                 import_lib = ctypes.CDLL(tidl_import_lib, mode=ctypes.RTLD_GLOBAL)
                 tidl_import = TIDLImport(import_lib, tidl_calib_tool, self.artifacts_folder,
                                          self.tidl_target, data_layout)
-                import_status = tidl_import.import_relay_ir(mod, params, subgraph_tensors)
+                import_status = tidl_import.import_relay_ir(mod, subgraph_tensors)
                 _ctypes.dlclose(import_lib._handle)
                 if import_status == 1:
                     print("TIDL import of Relay IR graph succeeded.")
