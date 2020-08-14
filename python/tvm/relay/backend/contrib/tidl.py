@@ -343,7 +343,7 @@ class RemoveMultiplyByOne(ExprMutator):
                     return call.args[1]
         return super().visit_call(call)
 
-def generate_subgraph_tensors(tidl_target, mod, params, graph_input):
+def generate_subgraph_tensors(tidl_target, mod, params, graph_input, save_output=False):
     """Creates calibration graph from mod and executes on the cpu to generate boundary tensors.
     """
 
@@ -372,8 +372,9 @@ def generate_subgraph_tensors(tidl_target, mod, params, graph_input):
     for i, res in enumerate(results):
         if i in calib_mutator.name_map:
             subgraph_tensors[calib_mutator.name_map[i]] = res
-            file_name = calib_mutator.name_map[i] + ".txt"
-            np.savetxt(file_name, res.flatten(), fmt='%10.5f')
+            if save_output:
+                file_name = calib_mutator.name_map[i] + ".txt"
+                np.savetxt(file_name, res.flatten(), fmt='%10.5f')
 
     return subgraph_tensors
 

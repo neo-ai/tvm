@@ -436,11 +436,15 @@ def _max_pool_whitelist_fn(attrs, args):
 
 @tvm.ir.register_op_attr("max", "target.tidl")
 def _max_whitelist_fn(attrs, args):
-    return True
+    axis = attrs.axis
+    supported = (not attrs.exclude) and isinstance(axis, tvm.ir.container.Array) and \
+                (len(axis) == 2) and ((int(axis[0]) == 1 and int(axis[1]) == 2) or \
+                                      (int(axis[0]) == 2 and int(axis[1]) == 3))
+    return supported
 
 @tvm.ir.register_op_attr("mean", "target.tidl")
 def _mean_whitelist_fn(attrs, args):
-    return True
+    return _max_whitelist_fn(attrs, args)  # same constraints as "max"
 
 @tvm.ir.register_op_attr("nn.nms", "target.tidl")
 def _nms_whitelist_fn(attrs, args):
