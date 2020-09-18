@@ -32,10 +32,6 @@ from . import common, frontends
 from .main import register_parser
 
 
-# pylint: disable=invalid-name
-logger = logging.getLogger("TVMC")
-
-
 @register_parser
 def add_compile_parser(subparsers):
     """ Include parser for 'compile' subcommand """
@@ -111,7 +107,7 @@ def drive_compile(args):
         None,
         args.model_format,
         args.tuning_records,
-        args.desired_layout,
+        args.tensor_layout,
     )
 
     if dumps:
@@ -180,24 +176,26 @@ def compile_model(
     # Handle the case in which target is a path to a JSON file.
     if os.path.exists(target):
         with open(target) as target_file:
-            logger.info("using target input from file: %s", target)
+            logging.info("using target input from file: %s", target)
             target = "".join(target_file.readlines())
 
     # TODO(@leandron) We don't have an API to collect a list of supported
     #       targets yet
-    logger.debug("creating target from input: %s", target)
+    logging.debug("creating target from input: %s", target)
     tvm_target = tvm.target.Target(target)
     target_host = target_host or ""
 
     if tuning_records and os.path.exists(tuning_records):
-        logger.debug("tuning records file provided: %s", tuning_records)
+        # TODO (@leandron) a new PR will introduce the 'tune' subcommand
+        #      the is used to generate the tuning records file
+        logging.debug("tuning records file provided: %s", tuning_records)
         with autotvm.apply_history_best(tuning_records):
             with tvm.transform.PassContext(opt_level=3):
-                logger.debug("building relay graph with tuning records")
+                logging.debug("building relay graph with tuning records")
                 graph_module = relay.build(mod, tvm_target, params=params, target_host=tvm_target)
     else:
         with tvm.transform.PassContext(opt_level=3):
-            logger.debug("building relay graph (no tuning records provided)")
+            logging.debug("building relay graph (no tuning records provided)")
             graph_module = relay.build(mod, tvm_target, params=params, target_host=tvm_target)
 
     # Generate output dump files with sources
@@ -210,8 +208,6 @@ def compile_model(
         source = str(mod) if source_type == "relay" else lib.get_source(source_type)
         dumps[source_type] = source
 
-    # TODO we need to update this return to use the updated graph module APIs
-    #      as these getter functions will be deprecated in the next release (@leandron)
     return graph_module.get_json(), graph_module.get_lib(), graph_module.get_params(), dumps
 
 
@@ -241,21 +237,21 @@ def save_module(module_path, graph, lib, params, cross=None):
     temp = util.tempdir()
     path_lib = temp.relpath(lib_name)
     if not cross:
-        logger.debug("exporting library to %s", path_lib)
+        logging.debug("exporting library to %s", path_lib)
         lib.export_library(path_lib)
     else:
-        logger.debug("exporting library to %s , using cross compiler %s", path_lib, cross)
+        logging.debug("exporting library to %s , using cross compiler %s", path_lib, cross)
         lib.export_library(path_lib, cc.cross_compiler(cross))
 
     with open(temp.relpath(graph_name), "w") as graph_file:
-        logger.debug("writing graph to file to %s", graph_file.name)
+        logging.debug("writing graph to file to %s", graph_file.name)
         graph_file.write(graph)
 
     with open(temp.relpath(param_name), "wb") as params_file:
-        logger.debug("writing params to file to %s", params_file.name)
+        logging.debug("writing params to file to %s", params_file.name)
         params_file.write(relay.save_param_dict(params))
 
-    logger.debug("saving module as tar file to %s", module_path)
+    logging.debug("saving module as tar file to %s", module_path)
     with tarfile.open(module_path, "w") as tar:
         tar.add(path_lib, lib_name)
         tar.add(temp.relpath(graph_name), graph_name)

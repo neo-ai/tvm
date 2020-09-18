@@ -33,10 +33,6 @@ from tvm import relay
 from tvm.driver.tvmc.common import TVMCException
 
 
-# pylint: disable=invalid-name
-logger = logging.getLogger("TVMC")
-
-
 class Frontend(ABC):
     """Abstract class for command line driver frontend.
 
@@ -158,7 +154,6 @@ class OnnxFrontend(Frontend):
         # pylint: disable=C0415
         import onnx
 
-        # pylint: disable=E1101
         model = onnx.load(path)
 
         # pylint: disable=E1101
@@ -196,7 +191,7 @@ class TensorflowFrontend(Frontend):
         graph_def.ParseFromString(content)
         graph_def = tf_testing.ProcessGraphDefParam(graph_def)
 
-        logger.debug("parse TensorFlow model and convert into Relay computation graph")
+        logging.debug("relay.frontend.from_tensorflow")
         return relay.frontend.from_tensorflow(graph_def)
 
 
@@ -239,17 +234,18 @@ class TFLiteFrontend(Frontend):
 
         try:
             version = tflite_model.Version()
-            logger.debug("tflite version %s", version)
+            logging.debug("tflite version %s", version)
         except Exception:
             raise TVMCException("input file not tflite")
 
         if version != 3:
             raise TVMCException("input file not tflite version 3")
 
-        logger.debug("tflite_input_type")
+        logging.debug("tflite_input_type")
         shape_dict, dtype_dict = TFLiteFrontend._input_type(tflite_model)
 
-        logger.debug("parse TFLite model and convert into Relay computation graph")
+        # parse TFLite model and convert into Relay computation graph
+        logging.debug("relay.frontend.from_tflite")
         mod, params = relay.frontend.from_tflite(
             tflite_model, shape_dict=shape_dict, dtype_dict=dtype_dict
         )
@@ -305,8 +301,7 @@ class PyTorchFrontend(Frontend):
 
         traced_model.eval()  # Switch to inference mode
         input_shapes = [("input{}".format(idx), shape) for idx, shape in enumerate(shapes)]
-
-        logger.debug("parse Torch model and convert into Relay computation graph")
+        logging.debug("relay.frontend.from_pytorch")
         return relay.frontend.from_pytorch(traced_model, input_shapes)
 
 
