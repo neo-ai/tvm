@@ -35,7 +35,7 @@ We use a convolution layer as an example in this tutorial.
 
 import numpy as np
 import tvm
-from tvm import te, auto_scheduler, topi
+from tvm import te, testing, auto_scheduler, topi
 from tvm.topi.testing import conv2d_nchw_python
 
 ######################################################################
@@ -63,7 +63,7 @@ def conv2d_layer(N, H, W, CO, CI, KH, KW, stride, padding):
 
 target = tvm.target.Target("cuda")
 
-# Use the last layer in ResNet-50
+# the last layer in resnet
 N, H, W, CO, CI, KH, KW, strides, padding = 1, 7, 7, 512, 512, 3, 3, (1, 1), (1, 1)
 task = auto_scheduler.create_task(conv2d_layer, (N, H, W, CO, CI, KH, KW, strides, padding), target)
 
@@ -74,20 +74,20 @@ print(task.compute_dag)
 # Next, we set parameters for the auto-scheduler. These parameters
 # mainly specify how we do the measurement during the search and auto-tuning.
 #
-# * :code:`measure_ctx` launches a different process for measurement. This
+# * `measure_ctx` launches a different process for measurement. This
 #   provides an isolation. It can protect the master process from GPU crashes
 #   happended during measurement and avoid other runtime conflicts.
-# * :code:`min_repeat_ms` defines the minimum duration of one "repeat" in every measurement.
+# * `min_repeat_ms` defines the minimum duration of one "repeat" in every measurement.
 #   This can warmup the GPU, which is necessary to get accurate measurement results.
 #   Typically, we recommend a value > 300 ms.
-# * :code:`num_measure_trials` is the number of measurement trials we can use during the search.
+# * `num_measure_trials` is the number of measurement trials we can use during the search.
 #   We only make 10 trials in this tutorial for a fast demonstration. In practice, 1000 is a
 #   good value for the search to converge. You can do more trials according to your time budget.
-# * In addition, we use :code:`RecordToFile` to dump measurement records into a file `conv2d.json`.
+# * In addition, we use `RecordToFile` to dump measurement records into a file `conv2d.json`.
 #   The measurement records can be used to query the history best, resume the search,
 #   and do more analyses later.
-# * see :any:`auto_scheduler.TuningOptions`,
-#   :any:`auto_scheduler.LocalRPCMeasureContext` for more parameters.
+# * see :any:`auto_scheduler.auto_schedule.TuningOptions`:,
+#   :any:`auto_scheduler.measure.LocalRPCMeasureContext` for more parameters.
 
 measure_ctx = auto_scheduler.LocalRPCMeasureContext(min_repeat_ms=300)
 tune_option = auto_scheduler.TuningOptions(
@@ -105,9 +105,6 @@ tune_option = auto_scheduler.TuningOptions(
 
 sch, args = auto_scheduler.auto_schedule(task, tuning_options=tune_option)
 
-# Kill the process for measurement
-del measure_ctx
-
 ######################################################################
 # We can lower the schedule to see the IR after auto-scheduling.
 # The auto-scheduler correctly performs optimizations including multi-level tiling,
@@ -122,7 +119,7 @@ print(tvm.lower(sch, args, simple_mode=True))
 
 func = tvm.build(sch, args, target)
 
-# Check correctness
+# check correctness
 data_np = np.random.uniform(size=(N, CI, H, W)).astype(np.float32)
 weight_np = np.random.uniform(size=(CO, CI, KH, KW)).astype(np.float32)
 bias_np = np.random.uniform(size=(1, CO, 1, 1)).astype(np.float32)
@@ -137,7 +134,7 @@ out_tvm = tvm.nd.empty(out_np.shape, ctx=ctx)
 func(data_tvm, weight_tvm, bias_tvm, out_tvm)
 
 # Check results
-np.testing.assert_allclose(out_np, out_tvm.asnumpy(), rtol=1e-3)
+tvm.testing.assert_allclose(out_np, out_tvm.asnumpy(), rtol=1e-3)
 
 # Evaluate execution time
 evaluator = func.time_evaluator(func.entry_name, ctx, min_repeat_ms=500)
@@ -183,7 +180,6 @@ cost_model.update_from_file(log_file)
 search_policy = auto_scheduler.SketchPolicy(
     task, cost_model, init_search_callbacks=[auto_scheduler.PreloadMeasuredStates(log_file)]
 )
-measure_ctx = auto_scheduler.LocalRPCMeasureContext(min_repeat_ms=300)
 tune_option = auto_scheduler.TuningOptions(
     num_measure_trials=5,
     runner=measure_ctx.runner,
@@ -191,5 +187,5 @@ tune_option = auto_scheduler.TuningOptions(
 )
 sch, args = auto_scheduler.auto_schedule(task, search_policy, tuning_options=tune_option)
 
-# Kill the measurement process
+# kill the measurement process
 del measure_ctx

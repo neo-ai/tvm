@@ -478,7 +478,7 @@ Array<State> SketchPolicyNode::EvolutionarySearch(const Array<State>& init_popul
 
       if (dis(rand_gen) < mutation_prob) {
         const auto& rule = mutation_rules[RandomChoose(rule_selection_probs, &rand_gen)];
-        if (rule->Apply(this, &tmp_s, &rand_gen) == PopulationGenerationRule::ResultKind::kValid) {
+        if (rule->Apply(this, &tmp_s) == PopulationGenerationRule::ResultKind::kValid) {
           pnext->push_back(std::move(tmp_s));
           mutation_success_ct++;
         } else {

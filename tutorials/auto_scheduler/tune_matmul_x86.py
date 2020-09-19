@@ -60,9 +60,8 @@ def matmul_add(N, L, M, dtype):
 # ^^^^^^^^^^^^^^^^^^^^^^
 # We then create a search task with N=L=M=128 and dtype="float32"
 # If your machine supports avx instructions, you can
-#
-#   - replace "llvm" below with "llvm -mcpu=core-avx2" to enable AVX2
-#   - replace "llvm" below with "llvm -mcpu=skylake-avx512" to enable AVX-512
+# - replace "llvm" below with "llvm -mcpu=core-avx2" to enable AVX2
+# - replace "llvm" below with "llvm -mcpu=skylake-avx512" to enable AVX-512
 
 target = tvm.target.Target("llvm")
 task = tvm.auto_scheduler.create_task(matmul_add, (128, 128, 128, "float32"), target)
@@ -79,7 +78,7 @@ print(task.compute_dag)
 # * In addition, we use :code:`RecordToFile` to dump measurement records into a file `matmul.json`.
 #   The measurement records can be used to query the history best, resume the search,
 #   and do more analyses later.
-# * see :any:`auto_scheduler.TuningOptions` for more parameters
+# * see :any:`auto_scheduler.auto_schedule.TuningOptions`: for more parameters
 
 tune_option = auto_scheduler.TuningOptions(
     num_measure_trials=10, measure_callbacks=[auto_scheduler.RecordToFile("matmul.json")]
@@ -120,7 +119,7 @@ out_tvm = tvm.nd.empty(out_np.shape, ctx=ctx)
 func(a_tvm, b_tvm, c_tvm, out_tvm)
 
 # Check results
-np.testing.assert_allclose(out_np, out_tvm.asnumpy(), rtol=1e-3)
+tvm.testing.assert_allclose(out_np, out_tvm.asnumpy(), rtol=1e-3)
 
 # Evaluate execution time.
 evaluator = func.time_evaluator(func.entry_name, ctx, min_repeat_ms=500)
@@ -190,5 +189,5 @@ def resume_search(task, log_file):
 #   For example, you can start a new thread/process (with the builtin python library
 #   threading or multiprocessing) and run the tvm binaries in the new thread/process.
 #   This provides an isolation and avoids the conflict in the main thread/process.
-#   You can also use :any:`auto_scheduler.LocalRPCMeasureContext` for auto-scheduler,
+#   You can also use :any:`auto_scheduler.measure.LocalRPCMeasureContext` for auto-scheduler,
 #   as shown in the GPU tutorial (:ref:`auto-scheduler-conv-gpu`).
