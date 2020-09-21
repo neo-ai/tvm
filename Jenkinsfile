@@ -94,8 +94,8 @@ def init_git_win() {
 }
 
 def cancel_previous_build() {
-    // cancel previous build if it is not on main.
-    if (env.BRANCH_NAME != "main") {
+    // cancel previous build if it is not on master.
+    if (env.BRANCH_NAME != "master") {
         def buildNumber = env.BUILD_NUMBER as int
         // Milestone API allows us to cancel previous build
         // with the same milestone number
