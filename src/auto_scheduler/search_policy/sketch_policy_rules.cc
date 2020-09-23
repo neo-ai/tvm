@@ -441,9 +441,6 @@ std::vector<std::pair<State, int>> RuleSpecialComputeLocationGPU::Apply(
 
 PopulationGenerationRule::ResultKind InitFillTileSize::Apply(SketchPolicyNode* policy, State* state,
                                                              std::mt19937* rand_gen) const {
-  int max_innermost_split_factor =
-      GetIntParam(policy->params, SketchParamKey::max_innermost_split_factor);
-
   StateNode* pstate = state->CopyOnWrite();
   // Scan the transformation history and randomly fill tiles size for all SplitStep
   for (size_t step_id = 0; step_id < (*state)->transform_steps.size(); ++step_id) {
@@ -462,7 +459,8 @@ PopulationGenerationRule::ResultKind InitFillTileSize::Apply(SketchPolicyNode* p
       CHECK(ps->extent);
       int extent = GetIntImm(ps->extent.value());
       const auto& candidate_lens = policy->split_memo.GetFactorizationSchemes(
-          extent, ps->lengths.size(), max_innermost_split_factor);
+          extent, ps->lengths.size(),
+          GetIntParam(policy->params, SketchParamKey::max_innermost_split_factor));
       const auto& candidate_lengths = candidate_lens[(*rand_gen)() % candidate_lens.size()];
 
       pstate->transform_steps.Set(
@@ -477,8 +475,8 @@ PopulationGenerationRule::ResultKind InitFillTileSize::Apply(SketchPolicyNode* p
   return ResultKind::kValid;
 }
 
-PopulationGenerationRule::ResultKind InitChangeComputeLocation::Apply(SketchPolicyNode* policy,
-                                                                      State* state) const {
+PopulationGenerationRule::ResultKind InitChangeComputeLocation::Apply(
+    SketchPolicyNode* policy, State* state, std::mt19937* rand_gen) const {
   if (GetIntParam(policy->params, SketchParamKey::disable_change_compute_location)) {
     return ResultKind::kValid;
   }
@@ -497,7 +495,7 @@ PopulationGenerationRule::ResultKind InitChangeComputeLocation::Apply(SketchPoli
     std::vector<std::pair<int, int>> candidates =
         GetComputeLocationCandidates(policy->search_task, *state, stage_id);
 
-    int choice = (policy->rand_gen)() % (candidates.size() + 2);
+    int choice = (*rand_gen)() % (candidates.size() + 2);
 
     if (choice == 0) {
       if (!HasReduceIter(stage)) {
@@ -520,8 +518,8 @@ PopulationGenerationRule::ResultKind InitChangeComputeLocation::Apply(SketchPoli
   return PopulationGenerationRule::ResultKind::kValid;
 }
 
-PopulationGenerationRule::ResultKind InitParallel::Apply(SketchPolicyNode* policy,
-                                                         State* state) const {
+PopulationGenerationRule::ResultKind InitParallel::Apply(SketchPolicyNode* policy, State* state,
+                                                         std::mt19937* rand_gen) const {
   std::function<void(const SketchPolicyNode&, State*, int stage_id, int iter_offset)>
       annotate_parallel;
   annotate_parallel = [&annotate_parallel](const SketchPolicyNode& policy, State* state,
@@ -585,8 +583,8 @@ PopulationGenerationRule::ResultKind InitParallel::Apply(SketchPolicyNode* polic
   return ResultKind::kValid;
 }
 
-PopulationGenerationRule::ResultKind InitUnroll::Apply(SketchPolicyNode* policy,
-                                                       State* state) const {
+PopulationGenerationRule::ResultKind InitUnroll::Apply(SketchPolicyNode* policy, State* state,
+                                                       std::mt19937* rand_gen) const {
   std::vector<int>& auto_unroll_configs =
       IsGPUTask(policy->search_task) ? auto_unroll_configs_gpu : auto_unroll_configs_cpu;
   for (size_t stage_id = 0; stage_id < (*state)->stages.size(); ++stage_id) {
@@ -958,8 +956,8 @@ PopulationGenerationRule::ResultKind MutateTileSize::Apply(SketchPolicyNode* pol
   return ResultKind::kInvalid;
 }
 
-PopulationGenerationRule::ResultKind MutateAutoUnroll::Apply(SketchPolicyNode* policy,
-                                                             State* state) const {
+PopulationGenerationRule::ResultKind MutateAutoUnroll::Apply(SketchPolicyNode* policy, State* state,
+                                                             std::mt19937* rand_gen) const {
   // Extract all auto_unroll_max_step pragma steps.
   std::vector<int> pragma_steps;
   for (size_t i = 0; i < (*state)->transform_steps.size(); ++i) {
@@ -977,12 +975,12 @@ PopulationGenerationRule::ResultKind MutateAutoUnroll::Apply(SketchPolicyNode* p
       IsGPUTask(policy->search_task) ? auto_unroll_configs_gpu : auto_unroll_configs_cpu;
 
   // Randomly pick up an auto unroll pragma step
-  auto step_id = pragma_steps[(policy->rand_gen)() % pragma_steps.size()];
+  auto step_id = pragma_steps[(*rand_gen)() % pragma_steps.size()];
   auto ps = (*state)->transform_steps[step_id].as<PragmaStepNode>();
   CHECK(ps);
 
   // Mutate its value to a random candidates
-  auto val = std::to_string(auto_unroll_configs[(policy->rand_gen)() % auto_unroll_configs.size()]);
+  auto val = std::to_string(auto_unroll_configs[(*rand_gen)() % auto_unroll_configs.size()]);
   StateNode* pstate = state->CopyOnWrite();
   pstate->transform_steps.Set(step_id, PragmaStep(ps->stage_id, ps->iter_id,
                                                   std::string("auto_unroll_max_step") + "$" + val));
@@ -990,7 +988,8 @@ PopulationGenerationRule::ResultKind MutateAutoUnroll::Apply(SketchPolicyNode* p
 }
 
 PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNode* policy,
-                                                                  State* state) const {
+                                                                  State* state,
+                                                                  std::mt19937* rand_gen) const {
   if (GetIntParam(policy->params, SketchParamKey::disable_change_compute_location)) {
     return PopulationGenerationRule::ResultKind::kInvalid;
   }
@@ -1016,7 +1015,7 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
   }
 
   // Randomly pick one step
-  size_t step_id = compute_at_steps[(policy->rand_gen)() % compute_at_steps.size()];
+  size_t step_id = compute_at_steps[(*rand_gen)() % compute_at_steps.size()];
   auto ps = (*state)->transform_steps[step_id].as<ComputeAtStepNode>();
   int stage_inc = GetTargetStageIDInState(*state, step_id) - ps->stage_id;
   CHECK(ps != nullptr);
@@ -1028,7 +1027,7 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
     return PopulationGenerationRule::ResultKind::kInvalid;
   }
 
-  int choice = (policy->rand_gen)() % (candidates.size());
+  int choice = (*rand_gen)() % (candidates.size());
   int new_compute_at_stage_id = candidates[choice].first;
   int new_compute_at_iter_id = candidates[choice].second;
 
@@ -1083,6 +1082,12 @@ PopulationGenerationRule::ResultKind MutateParallel::Apply(SketchPolicyNode* pol
 
   // Randomly pick one parallel step.
   size_t step_id = parallel_steps[(*rand_gen)() % parallel_steps.size()];
+  auto ps = (*state)->transform_steps[step_id].as<AnnotationStepNode>();
+  CHECK(ps);
+  size_t stage_id = ps->stage_id;
+  size_t iter_id = ps->iter_id;
+  const Stage& stage = (*state)->stages[stage_id];
+  const Iterator& it = stage->iters[iter_id];
 
   // Replay a new state until the picked fuse step.
   State tmp_s = policy->search_task->compute_dag->init_state;
@@ -1109,15 +1114,15 @@ PopulationGenerationRule::ResultKind MutateParallel::Apply(SketchPolicyNode* pol
     }
   }
 
-  // Randomly pick one granularity
-  int fuse_to_iter_id = (*rand_gen)() % max_fusable_iter_id + 1;
-  Array<Integer> fused_ids;
-  for (int i = 0; i < fuse_to_iter_id; ++i) {
-    fused_ids.push_back(i);
-  }
-  int iter_offset = fuse_step->fused_ids.back()->value - fused_ids.back()->value;
-  if (iter_offset == 0) {
-    return ResultKind::kInvalid;
+  // Mutate the fusion iters and replay the mutated fused/annotation steps.
+  int iter_offset = 0;
+  if (RandomChoose(fuse_dir, rand_gen) == 0) {
+    fused_ids.pop_back();
+    iter_offset = 1;
+  } else {
+    auto last_id = fused_ids.back().get()->value;
+    fused_ids.push_back(last_id + 1);
+    iter_offset = -1;
   }
 
   // Replay the mutated fused and annotation step.
