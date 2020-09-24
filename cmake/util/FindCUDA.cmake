@@ -93,7 +93,6 @@ macro(find_cuda use_cuda)
         ${CUDA_TOOLKIT_ROOT_DIR}/lib)
       find_library(CUDA_CUBLASLT_LIBRARY
         NAMES cublaslt cublasLt
-        PATHS
         ${CUDA_TOOLKIT_ROOT_DIR}/lib64
         ${CUDA_TOOLKIT_ROOT_DIR}/lib)
     endif(MSVC)
