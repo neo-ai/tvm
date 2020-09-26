@@ -97,6 +97,22 @@ class CustomDatatypesLowerer : public StmtExprMutator {
     return expr;
   }
 
+  inline PrimExpr VisitExpr_(const CallNode* call) final {
+    bool toBeLowered = datatype::Registry::Global()->GetTypeRegistered(call->dtype.code());
+    PrimExpr expr = StmtExprMutator::VisitExpr_(call);
+    call = expr.as<CallNode>();
+    if (toBeLowered) {
+      auto op = call->op.as<OpNode>();
+      CHECK(op != nullptr) << "Lowering non-intrinsic Calls not implemented";
+      auto lower = datatype::GetIntrinLowerFunc(target_, op->name, call->dtype.code());
+      CHECK(lower) << "Intrinsic lowering function for target " << target_ << ", intrinsic name "
+                   << op->name << ", type " << static_cast<unsigned>(call->dtype.code())
+                   << " not found";
+      return (*lower)(expr);
+    }
+    return expr;
+  }
+
 #define DEFINE_MUTATE(OP, NodeName)                                                \
   inline PrimExpr VisitExpr_(const NodeName* op) final {                           \
     auto type_code = op->dtype.code();                                             \
