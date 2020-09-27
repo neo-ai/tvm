@@ -517,9 +517,9 @@ PopulationGenerationRule::ResultKind InitChangeComputeLocation::Apply(
   try {
     *state = policy->search_task->compute_dag.InferBound(*state);
   } catch (std::exception& e) {
-    return PopulationGenerationRule::ResultKind::kInvalid;
+    return ResultKind::kInvalid;
   }
-  return PopulationGenerationRule::ResultKind::kValid;
+  return ResultKind::kValid;
 }
 
 PopulationGenerationRule::ResultKind InitParallel::Apply(SketchPolicyNode* policy, State* state,
@@ -995,7 +995,7 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
                                                                   State* state,
                                                                   std::mt19937* rand_gen) const {
   if (GetIntParam(policy->params, SketchParamKey::disable_change_compute_location)) {
-    return PopulationGenerationRule::ResultKind::kInvalid;
+    return ResultKind::kInvalid;
   }
 
   // Extract all compute_at steps.
@@ -1015,7 +1015,7 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
     }
   }
   if (compute_at_steps.empty()) {
-    return PopulationGenerationRule::ResultKind::kInvalid;
+    return ResultKind::kInvalid;
   }
 
   // Randomly pick one step
@@ -1024,13 +1024,12 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
   int stage_inc = GetTargetStageIDInState(*state, step_id) - ps->stage_id;
   CHECK(ps != nullptr);
 
+  // Randomly pick a new computation location
   std::vector<std::pair<int, int>> candidates =
       GetComputeLocationCandidates(policy->search_task, *state, ps->stage_id + stage_inc);
-
   if (candidates.empty()) {
-    return PopulationGenerationRule::ResultKind::kInvalid;
+    return ResultKind::kInvalid;
   }
-
   int choice = (*rand_gen)() % (candidates.size());
   int new_compute_at_stage_id = candidates[choice].first;
   int new_compute_at_iter_id = candidates[choice].second;
@@ -1047,12 +1046,12 @@ PopulationGenerationRule::ResultKind MutateComputeLocation::Apply(SketchPolicyNo
     try {
       StepApplyToState(tmp_s->transform_steps.back(), &tmp_s, policy->search_task->compute_dag);
     } catch (dmlc::Error& e) {
-      return PopulationGenerationRule::ResultKind::kInvalid;
+      return ResultKind::kInvalid;
     }
   }
 
   *state = tmp_s;
-  return PopulationGenerationRule::ResultKind::kValid;
+  return ResultKind::kValid;
 }
 
 PopulationGenerationRule::ResultKind MutateParallel::Apply(SketchPolicyNode* policy, State* state,
@@ -1086,12 +1085,6 @@ PopulationGenerationRule::ResultKind MutateParallel::Apply(SketchPolicyNode* pol
 
   // Randomly pick one parallel step.
   size_t step_id = parallel_steps[(*rand_gen)() % parallel_steps.size()];
-  auto ps = (*state)->transform_steps[step_id].as<AnnotationStepNode>();
-  CHECK(ps);
-  size_t stage_id = ps->stage_id;
-  size_t iter_id = ps->iter_id;
-  const Stage& stage = (*state)->stages[stage_id];
-  const Iterator& it = stage->iters[iter_id];
 
   // Replay a new state until the picked fuse step.
   State tmp_s = policy->search_task->compute_dag->init_state;
@@ -1118,15 +1111,15 @@ PopulationGenerationRule::ResultKind MutateParallel::Apply(SketchPolicyNode* pol
     }
   }
 
-  // Mutate the fusion iters and replay the mutated fused/annotation steps.
-  int iter_offset = 0;
-  if (RandomChoose(fuse_dir, rand_gen) == 0) {
-    fused_ids.pop_back();
-    iter_offset = 1;
-  } else {
-    auto last_id = fused_ids.back().get()->value;
-    fused_ids.push_back(last_id + 1);
-    iter_offset = -1;
+  // Randomly pick one granularity
+  int fuse_to_iter_id = (*rand_gen)() % max_fusable_iter_id + 1;
+  Array<Integer> fused_ids;
+  for (int i = 0; i < fuse_to_iter_id; ++i) {
+    fused_ids.push_back(i);
+  }
+  int iter_offset = fuse_step->fused_ids.back()->value - fused_ids.back()->value;
+  if (iter_offset == 0) {
+    return ResultKind::kInvalid;
   }
 
   // Replay the mutated fused and annotation step.
