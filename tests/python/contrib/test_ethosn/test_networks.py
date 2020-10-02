@@ -122,6 +122,9 @@ def test_mobilenet_v1():
     # codegen, which could come about from either a change in Support Library
     # version or a change in the Ethos-N codegen. To update this requires running
     # on hardware that isn't available in CI.
+    _compile_hash = {"81637c89339201a07dc96e3b5dbf836a"}
+    if tei.get_ethosn_api_version() == 2008:
+        _compile_hash = {"47e216d8ab2bf491708ccf5620bc0d02"}
     _test_image_network(
         model_url="https://storage.googleapis.com/download.tensorflow.org/"
         "models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz",
@@ -191,7 +194,7 @@ def test_ssd_mobilenet_v1():
         "models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip",
         model_sub_path="detect.tflite",
         input_dict={"normalized_input_image_tensor": (1, 300, 300, 3)},
-        compile_hash={"29aec6b184b09454b4323271aadf89b1", "6211d96103880b016baa85e638abddef"},
+        compile_hash=_compile_hash,
         output_count=4,
         host_ops=28,
         npu_partitions=2,
