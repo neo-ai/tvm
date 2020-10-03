@@ -528,6 +528,15 @@ class MatMul(OnnxOpConverter):
             # Convert a and b into 3 dimensional tensors.
             a = flatten_to_3d(inputs[0], a_shape)
             b = flatten_to_3d(inputs[1], b_shape)
+            # Broadcast b to match batch size of a
+            new_b_shape = _op.concatenate(
+                [
+                    _op.strided_slice(_op.shape_of(a), [0], [1]),
+                    _op.strided_slice(_op.shape_of(b), [1], [3]),
+                ],
+                0,
+            )
+            b = _op.broadcast_to(b, new_b_shape)
             # Transpose matrix dimensions of b.
             b = _op.transpose(b, [0, 2, 1])
             # Perform a batch matmul.
@@ -1891,19 +1900,6 @@ class TopK(OnnxOpConverter):
             raise ValueError("TVM only supports finding TopK largest elements")
 
         return _op.topk(inputs[0], inputs[1], axis=axis)
-
-
-class Range(OnnxOpConverter):
-    """Operator converter for Range"""
-
-    @classmethod
-    def _impl_v1(cls, inputs, attr, params):
-        if len(inputs) != 3:
-            raise ValueError("Expect 3 input only")
-
-        return _op.arange(
-            inputs[0], inputs[1], inputs[2], dtype=infer_type(inputs[0]).checked_type.dtype
-        )
 
 
 class MaxRoiPool(OnnxOpConverter):
