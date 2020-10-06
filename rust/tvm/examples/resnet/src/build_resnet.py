@@ -64,32 +64,20 @@ data_shape = (batch_size,) + image_shape
 
 def build(target_dir):
     """ Compiles resnet18 with TVM"""
-    deploy_lib = osp.join(target_dir, "deploy_lib.o")
-    if osp.exists(deploy_lib):
-        return
+    # Download the pretrained model in MxNet's format.
+    block = get_model("resnet18_v1", pretrained=True)
 
-    if args.pretrained:
-        # needs mxnet installed
-        from mxnet.gluon.model_zoo.vision import get_model
+    shape_dict = {"data": (1, 3, 224, 224)}
+    mod, params = relay.frontend.from_mxnet(block, shape_dict)
+    # Add softmax to do classification in last layer.
+    func = mod["main"]
+    func = relay.Function(
+        func.params, relay.nn.softmax(func.body), None, func.type_params, func.attrs
+    )
 
-        # if `--pretrained` is enabled, it downloads a pretrained
-        # resnet18 trained on imagenet1k dataset for image classification task
-        block = get_model("resnet18_v1", pretrained=True)
-        net, params = relay.frontend.from_mxnet(block, {"data": data_shape})
-        # we want a probability so add a softmax operator
-        func = net["main"]
-        net = relay.Function(
-            func.params, relay.nn.softmax(func.body), None, func.type_params, func.attrs
-        )
-    else:
-        # use random weights from relay.testing
-        net, params = relay.testing.resnet.get_workload(
-            num_layers=18, batch_size=batch_size, image_shape=image_shape
-        )
-
-    # compile the model
-    with tvm.transform.PassContext(opt_level=opt_level):
-        graph, lib, params = relay.build_module.build(net, target, params=params)
+    target = "llvm"
+    with tvm.transform.PassContext(opt_level=3):
+        graph, lib, params = relay.build(func, target, params=params)
 
     # save the model artifacts
     deploy_lib = osp.join(target_dir, "deploy_lib.o")
@@ -138,7 +126,7 @@ def transform_image(image):
 
 
 def get_cat_image():
-    img_url = "https://github.com/dmlc/mxnet.js/blob/main/data/cat.png?raw=true"
+    img_url = "https://github.com/dmlc/mxnet.js/blob/master/data/cat.png?raw=true"
     img_path = download_testdata(img_url, "cat.png", module="data")
     shutil.copyfile(img_path, "cat.png")
     img = Image.open(img_path).resize((224, 224))
