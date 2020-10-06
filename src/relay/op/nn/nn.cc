@@ -863,8 +863,9 @@ bool BatchMatmulRel(const Array<Type>& types, int num_inputs, const Attrs& attrs
     }
   }
   if (!is_dyn) {
-    CHECK(reporter->AssertEQ(x->shape[0], y->shape[0]))
-        << "BatchDot: batch dimension doesn't match, "
+    CHECK(reporter->AssertEQ(x->shape[0], y->shape[0]) || reporter->AssertEQ(x->shape[0], 1) ||
+          reporter->AssertEQ(y->shape[0], 1))
+        << "BatchDot: batch dimensions don't match, "
         << " x shape=" << x->shape << ", y shape=" << y->shape;
     CHECK(reporter->AssertEQ(x->shape[2], y->shape[2]))
         << "BatchDot: shapes of x and y is inconsistent, "
