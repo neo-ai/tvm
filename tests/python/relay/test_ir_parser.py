@@ -859,6 +859,22 @@ def test_resnet_inlined_params():
     tvm.ir.assert_structural_equal(mod, parsed_mod)
 
 
+def test_tuple_return_value():
+    program = """
+    type Box[T] {
+        constructor(T)
+    }
+
+    def @example() {
+        %0 = ();
+        %1 = constructor(%0);
+        %2 = constructor(0f);
+        (%1, %2,)
+    }
+    """
+    parse_module(program)
+
+
 def test_op_string_attr():
     call = parse_text(
         """
@@ -867,10 +883,17 @@ def test_op_string_attr():
         nn.conv2d(%x, %y, data_layout="NHWC", kernel_layout="HWIO")
         """
     )
+
     assert isinstance(call.op, tvm.ir.Op)
     assert call.op.name == "nn.conv2d"
     assert call.attrs.data_layout == "NHWC"
     assert call.attrs.kernel_layout == "HWIO"
+
+
+def test_load_prelude():
+    mod = tvm.IRModule()
+    mod.import_from_std("prelude.rly")
+    tvm.parser.parse(mod.astext())
 
 
 if __name__ == "__main__":
