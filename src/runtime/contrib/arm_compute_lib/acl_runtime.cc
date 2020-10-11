@@ -143,6 +143,8 @@ class ACLRuntime : public JSONRuntimeBase {
           CreateReshapeLayer(&layer_, node);
         } else if ("maximum" == op_name) {
           CreateMaximumLayer(&layer_, node);
+        } else if ("add" == op_name || "qnn.add" == op_name) {
+          CreateAddLayer(&layer_, node);
         } else {
           LOG(FATAL) << "Unsupported op: " << op_name;
         }
@@ -417,6 +419,36 @@ class ACLRuntime : public JSONRuntimeBase {
     auto function = std::make_shared<arm_compute::NEElementwiseMax>();
     function->configure(&layer->inputs[0], &layer->inputs[1], &layer->outputs[0]);
     layer->function = function;
+  }
+  /*!
+   * \brief Creates an add/qnn.add layer
+   *
+   * \param layer The ACL layer to build. Containing inputs, outputs and the ACL function.
+   * \param node  The JSON representation of the operator.
+   */
+  void CreateAddLayer(CachedLayer* layer, const JSONGraphNode& node) {
+    auto op_name = node.GetOpName();
+    if ("add" == op_name) {
+      layer->inputs.push_back(MakeACLTensorFromJSONEntry(node.GetInputs()[0]));
+      layer->inputs.push_back(MakeACLTensorFromJSONEntry(node.GetInputs()[1]));
+      layer->outputs.push_back(MakeACLTensorFromJSONNode(node));
+    } else if ("qnn.add" == op_name) {
+      layer->inputs.push_back(MakeACLTensorFromJSONEntry(node.GetInputs()[0], &node.GetInputs()[2],
+                                                         &node.GetInputs()[3]));
+      layer->inputs.push_back(MakeACLTensorFromJSONEntry(node.GetInputs()[1], &node.GetInputs()[4],
+                                                         &node.GetInputs()[5]));
+      layer->outputs.push_back(
+          MakeACLTensorFromJSONNode(node, &node.GetInputs()[6], &node.GetInputs()[7]));
+    } else {
+      throw std::runtime_error("Unsupported form of add op: " + op_name);
+    }
+
+    auto f = std::make_shared<arm_compute::NEArithmeticAddition>();
+
+    // SATURATE is used as add_QASYMM8_QASYMM8_QASYMM8 always saturates result
+    f->configure(&layer->inputs[0], &layer->inputs[1], &layer->outputs[0],
+                 arm_compute::ConvertPolicy::SATURATE);
+    layer->function = f;
   }
 
   /*! \brief Allow ACL functions to request auxiliary memory from TVM. */
