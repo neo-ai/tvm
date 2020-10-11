@@ -41,12 +41,9 @@ def test_apply_steps_with_layout_rewrite():
 
 def test_layout_rewrite_correctness():
     N = 128
-    target = "llvm"
-    workload = matmul_auto_scheduler_test
-    workload_key = auto_scheduler.make_workload_key(workload, (N, N, N))
-    dag = auto_scheduler.ComputeDAG(workload_key)
-    target = tvm.target.Target(target)
-    task = auto_scheduler.SearchTask(dag, workload_key, target)
+    target = tvm.target.Target("llvm")
+    task = auto_scheduler.create_task(matmul_auto_scheduler_test, (N, N, N), target)
+    dag = task.compute_dag
 
     with tempfile.NamedTemporaryFile() as fp:
         log_file = fp.name

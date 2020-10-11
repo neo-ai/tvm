@@ -105,6 +105,13 @@ def load_records(filename):
     Returns
     -------
     logs : List[auto_scheduler.measure.MeasureInput, auto_scheduler.measure.MeasureResult]
+
+    Notes
+    -----
+    Some unimportant and expensive fields in the returned MeasureInput are not deserialized
+    for faster read speed (e.g., input.task.compute_dag, input.state.stages).
+    If you want to use them, you can call the :code:`recover_measure_input` below
+    to rebuild these fields.
     """
     return zip(*RecordReader(filename).read_lines())
 
