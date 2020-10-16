@@ -115,7 +115,7 @@ def _RobustStandardScaler(op, inexpr, dshape, dtype, columns=None):
     ret = _op.divide(ret, _op.const(np.array(scaler.scale_, dtype), dtype))
     return ret
 
-def _ColumnTransformer(op, inexpr, dshape, dtype, columns=None):
+def _ColumnTransformer(op, inexpr, dshape, dtype, func_name, columns=None):
     """
     Scikit-Learn Compose: 
     Applies transformers to columns of an array 
@@ -123,25 +123,46 @@ def _ColumnTransformer(op, inexpr, dshape, dtype, columns=None):
     out = []
     for _, pipe, cols in op.transformers_:
         mod = pipe.steps[0][1]
-        out.append(sklearn_op_to_relay(mod, inexpr, dshape, dtype, cols))
+        out.append(sklearn_op_to_relay(mod, inexpr, dshape, dtype, func_name, cols))
     
     return _op.concatenate(out, axis=1)
 
+def _InverseLabelTransformer(op, inexpr, dshape, dtype, columns=None):
+    """
+    Identity transformation of the label data. The conversion to string happens in runtime
+    """
+    return inexpr
+
 _convert_map = {
-    'ColumnTransformer':_ColumnTransformer,
-    'SimpleImputer': _SimpleImputer,
-    'RobustImputer': _RobustImputer,
-    'RobustStandardScaler': _RobustStandardScaler,
-    'ThresholdOneHotEncoder': _ThresholdOneHotEncoder
+    'ColumnTransformer': {'transform': _ColumnTransformer},
+    'SimpleImputer': {'transform': _SimpleImputer},
+    'RobustImputer': {'transform': _RobustImputer},
+    'RobustStandardScaler': {'transform': _RobustStandardScaler},
+    'ThresholdOneHotEncoder': {'transform': _ThresholdOneHotEncoder},
+    'RobustLabelEncoder': {'inverse_transform': _InverseLabelTransformer}
 }
 
-def sklearn_op_to_relay(op, inexpr, dshape, dtype, columns=None):
+def sklearn_op_to_relay(op, inexpr, dshape, dtype, func_name, columns=None):
     classname = type(op).__name__
-    return _convert_map[classname](op, inexpr, dshape, dtype, columns)
+
+    if classname not in _convert_map:
+        raise NameError(
+            "Model {} not supported in scikit-learn frontend".format(classname))
+    if func_name not in _convert_map[classname]:
+        raise NameError(
+                "Function {} of Model {} not supported in scikit-learn frontend".format(
+                    func_name, classname))
+
+
+    if classname == 'ColumnTransformer':
+        return _convert_map[classname][func_name](op, inexpr, dshape, dtype, func_name, columns)
+    else:
+        return _convert_map[classname][func_name](op, inexpr, dshape, dtype, columns)
 
 def from_sklearn(model,
                  shape=None,
                  dtype="float32",
+                 func_name="transform",
                  columns=None):
 
     try:
@@ -149,16 +170,17 @@ def from_sklearn(model,
     except ImportError as e:
         raise ImportError(
             "Unable to import scikit-learn which is required {}".format(e))
-    
+
     inexpr = _expr.var('input', shape=shape, dtype=dtype)
-    outexpr = sklearn_op_to_relay(model, inexpr, shape, dtype, columns)
+    outexpr = sklearn_op_to_relay(model, inexpr, shape, dtype, func_name, columns)
 
     func = _function.Function(analysis.free_vars(outexpr), outexpr)
     return IRModule.from_expr(func), []
 
 def from_auto_ml(model,
                 shape=None,
-                dtype="float32"):
+                dtype="float32",
+                func_name="transform"):
 
     try:
         import sklearn
@@ -167,8 +189,14 @@ def from_auto_ml(model,
             "Unable to import scikit-learn which is required {}".format(e))
 
     outexpr = _expr.var('input', shape=shape, dtype=dtype)
-    for _, transformer in model.feature_transformer.steps:
-        outexpr = sklearn_op_to_relay(transformer, outexpr, shape, dtype, None)
+
+    if func_name == 'transform':
+        for _, transformer in model.feature_transformer.steps:
+            outexpr = sklearn_op_to_relay(transformer, outexpr, shape, dtype, func_name, None)
+    else:
+        transformer = model.target_transformer
+        outexpr = sklearn_op_to_relay(transformer, outexpr, shape, dtype, func_name, None)
+
 
     func = _function.Function(analysis.free_vars(outexpr), outexpr)
     return IRModule.from_expr(func), []

@@ -21,7 +21,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sagemaker_sklearn_extension.impute import RobustImputer
 from sagemaker_sklearn_extension.preprocessing import RobustStandardScaler
-from sagemaker_sklearn_extension.preprocessing import ThresholdOneHotEncoder
+from sagemaker_sklearn_extension.preprocessing import ThresholdOneHotEncoder, RobustLabelEncoder
 
 from tvm import topi
 import tvm.topi.testing
@@ -37,11 +37,11 @@ class SklearnTestHelper:
         self.target = target
         self.ctx = ctx
 
-    def compile(self, model, dshape, dtype, columns=None, auto_ml=False):
+    def compile(self, model, dshape, dtype, func_name, columns=None, auto_ml=False):
         if auto_ml:
-            mod, _ = relay.frontend.from_auto_ml(model, dshape, dtype)
+            mod, _ = relay.frontend.from_auto_ml(model, dshape, dtype, func_name)
         else:
-            mod, _ = relay.frontend.from_sklearn(model, dshape, dtype, columns)
+            mod, _ = relay.frontend.from_sklearn(model, dshape, dtype, func_name, columns)
 
         self.ex = relay.create_executor('vm', mod=mod, ctx=self.ctx, target=self.target)
         
@@ -50,7 +50,7 @@ class SklearnTestHelper:
        return result.asnumpy()
 
 def _test_model_impl(helper, model, dshape, input_data):
-    helper.compile(model, dshape, 'float32')
+    helper.compile(model, dshape, 'float32', 'transform')
     sklearn_out = model.transform(input_data)
     tvm_out = helper.run(input_data)
     tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
@@ -96,7 +96,7 @@ def test_threshold_onehot_encoder():
     tohe.categories_ = [[10, 11], [1, 2, 3], [7, 8, 9]]
     
     dshape = (relay.Any(), len(data[0]))
-    st_helper.compile(tohe, dshape, 'int32')
+    st_helper.compile(tohe, dshape, 'int32', 'transform')
     sklearn_out = tohe.transform(data).toarray()
     tvm_out = st_helper.run(data)
     tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
@@ -115,6 +115,19 @@ def test_column_transfomer():
     dshape = (relay.Any(), relay.Any())
     _test_model_impl(st_helper, ct, dshape, data)
 
+def test_inverse_label_transformer():
+    st_helper = SklearnTestHelper()
+    rle = RobustLabelEncoder()
+
+    data = np.array([1, 2, 3, 4, 5], dtype=np.int32)
+    rle.fit(data)
+    
+    dshape = (len(data),)
+    st_helper.compile(rle, dshape, 'int32', 'inverse_transform')
+    tvm_out = st_helper.run(data)
+    # identity transformation, because of the string input, the actually encoding happens outside 
+    # of tvm in runtime as post processing
+    tvm.testing.assert_allclose(data, tvm_out, rtol=1e-5, atol=1e-5)
 
 if __name__ == '__main__':
     test_simple_imputer()
@@ -122,3 +135,4 @@ if __name__ == '__main__':
     test_robust_scaler()
     test_column_transfomer()
     test_threshold_onehot_encoder()
+    test_inverse_label_transformer()
