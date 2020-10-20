@@ -119,6 +119,10 @@ def check_dynamism(args, op_name):
     ----------
     True if dynamism is present, False otherwise
     """
+    if len(args) == 0:
+        # There is currently a bug in add_fn in TRT where we receive an operator with zero arguments. This check is to get around that
+        # as well as any other operators which might have 0 arguments.
+        return False
     for arg in args:
         if isinstance(arg, (Call, Var, Constant, TupleGetItem)):
             for dim_shape in arg.checked_type.shape:
