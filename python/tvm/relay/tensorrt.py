@@ -119,11 +119,7 @@ def check_dynamism(args, op_name):
     ----------
     True if dynamism is present, False otherwise
     """
-    if not args:
-        # There is currently a bug in add_fn in TVM front-end for TRT
-        # where we receive an operator with 0 arguments. This check is to
-        # get around that as well as other operators which might have 0 arguments.
-        return False
+
     for arg in args:
         if isinstance(arg, (Call, Var, Constant, TupleGetItem)):
             for dim_shape in arg.checked_type.shape:
@@ -207,7 +203,9 @@ def register_tensorrt_annotations(trt_version, use_implicit_batch=True):
     # _register_external_op_helper("slice_like")
 
     def add_whitelist_fn(attrs, args):  # pylint: disable=unused-variable
-
+        for arg in args:
+            if not arg.checked_type.shape:
+                return False
         if any([x.checked_type.dtype != "float32" for x in args]):
             print("Only float32 inputs are supported for TensorRT.")
             return False
