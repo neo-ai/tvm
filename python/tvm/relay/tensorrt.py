@@ -119,7 +119,6 @@ def check_dynamism(args, op_name):
     ----------
     True if dynamism is present, False otherwise
     """
-
     for arg in args:
         if isinstance(arg, (Call, Var, Constant, TupleGetItem)):
             for dim_shape in arg.checked_type.shape:
