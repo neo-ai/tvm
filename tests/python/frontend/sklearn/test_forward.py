@@ -23,7 +23,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.preprocessing import StandardScaler, KBinsDiscretizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sagemaker_sklearn_extension.externals import AutoMLTransformer
 from sagemaker_sklearn_extension.externals import Header
 from sagemaker_sklearn_extension.impute import RobustImputer, RobustMissingIndicator
@@ -380,5 +380,6 @@ if __name__ == "__main__":
     test_automl()
     test_feature_union()
     test_inverse_label_transformer()
+    test_log_extreme_values_transformer()
     test_quantile_transformer()
     test_quantile_extremevalues_transformer()

@@ -281,5 +281,3 @@ register_shape_func("isinf", False, elemwise_shape_func)
 register_shape_func("logical_not", False, elemwise_shape_func)
 register_shape_func("sign", False, elemwise_shape_func)
 register_shape_func("abs", False, elemwise_shape_func)
-register_shape_func("copy", False, elemwise_shape_func)
-
