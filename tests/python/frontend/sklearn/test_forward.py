@@ -224,6 +224,7 @@ def test_log_extreme_values_transformer():
     dshape = (relay.Any(), len(x_log_extreme_vals[0]))
     _test_model_impl(st_helper, levt, dshape, x_log_extreme_vals)
 
+
 def test_pca():
     st_helper = SklearnTestHelper()
     pca = PCA(n_components=2)

@@ -508,7 +508,7 @@ _convert_map = {
     "Pipeline": {"transform": _Pipeline},
     "QuantileTransformer": {"transform": _QuantileTransformer},
     "QuantileExtremeValuesTransformer": {"transform": _QuantileExtremeValuesTransformer},
-    "LogExtremeValuesTransformer": {"transform":_LogExtremeValuesTransformer},
+    "LogExtremeValuesTransformer": {"transform": _LogExtremeValuesTransformer},
 }
 
 INPUT_FLOAT = 0
