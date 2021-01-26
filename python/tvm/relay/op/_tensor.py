@@ -89,6 +89,10 @@ register_injective_schedule("device_copy")
 register_broadcast_schedule("fast_exp")
 register_broadcast_schedule("fast_tanh")
 register_broadcast_schedule("fast_erf")
+# a fake on_device schedule.
+# this will not be used in actual computation
+# as on_device will be removed during DeviceAnnotation pass
+register_injective_schedule("on_device")
 
 
 # zeros
@@ -279,3 +283,5 @@ register_shape_func("sigmoid", False, elemwise_shape_func)
 register_shape_func("isnan", False, elemwise_shape_func)
 register_shape_func("isinf", False, elemwise_shape_func)
 register_shape_func("logical_not", False, elemwise_shape_func)
+register_shape_func("sign", False, elemwise_shape_func)
+register_shape_func("abs", False, elemwise_shape_func)
