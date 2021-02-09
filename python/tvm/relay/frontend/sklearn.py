@@ -513,7 +513,7 @@ def _cyclic_transform(data, low, high, dtype):
 def _DateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
     """
     Sagemaker-Scikit-Learn-Extension Transformer:
-    Converts array-like data with datetime.datetime or strings describing datetime objects into 
+    Converts array-like data with datetime.datetime or strings describing datetime objects into
     numeric features
     """
     mins = []
