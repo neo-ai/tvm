@@ -513,8 +513,8 @@ def _cyclic_transform(data, low, high, dtype):
 def _DateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
     """
     Sagemaker-Scikit-Learn-Extension Transformer:
-    Converts array-like data with datetime.datetime or strings describing datetime objects into numeric features
-    https://github.com/aws/sagemaker-scikit-learn-extension/blob/c95ede50fe7c8f555b87c57d7a812aee444cf716/src/sagemaker_sklearn_extension/feature_extraction/date_time.py#L94
+    Converts array-like data with datetime.datetime or strings describing datetime objects into 
+    numeric features
     """
     mins = []
     maxs = []
@@ -524,7 +524,7 @@ def _DateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
     for datetime_property in op.extract_:
         extract_func = datetime_property.extract_func.__name__
         cols.append(_date_time_func_index[extract_func])
-        if datetime_property.min != None:
+        if datetime_property.min is not None:
             cols_without_year.append(_date_time_func_index[extract_func])
             mins.append(datetime_property.min)
             maxs.append(datetime_property.max)
