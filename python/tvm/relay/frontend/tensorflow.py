@@ -18,7 +18,7 @@
 # pylint: disable=import-outside-toplevel, redefined-builtin
 """TF: Tensorflow frontend."""
 import warnings
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # Numpy support
 import numpy as np
