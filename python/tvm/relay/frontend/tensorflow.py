@@ -18,7 +18,7 @@
 # pylint: disable=import-outside-toplevel, redefined-builtin
 """TF: Tensorflow frontend."""
 import warnings
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # Numpy support
 import numpy as np
@@ -1574,6 +1574,41 @@ def _bias_add():
 
     return _impl
 
+def _broadcast_args():
+    def _impl(inputs, attr, params, mod):
+        if isinstance(inputs[0], _expr.Var):
+            s0 = params[inputs[0].name_hint]
+        else:
+            s0 = _infer_value(inputs[0], params, mod)
+        if isinstance(inputs[1], _expr.Var):
+            s1 = params[inputs[1].name_hint]
+        else:
+            s1 = _infer_value(inputs[1], params, mod)
+        s0 = list(s0.asnumpy().reshape([-1]))
+        s1 = list(s1.asnumpy().reshape([-1]))
+        s0_size, s1_size = len(s0), len(s1)
+
+        out = deque([])
+        for i in range(1, min(s0_size, s1_size) + 1):
+            if s0[s0_size - i] == s1[s1_size - i]:
+                out.appendleft(s0[s0_size - i])
+            elif s0[s0_size - i] == 1:
+                out.appendleft(s1[s1_size - i])
+            else:
+                assert s1[s1_size - i] == 1, "Incompatible broadcast type %s and %s" % (
+                    s0[s0_size - i],
+                    s1[s1_size - i],
+                )
+                out.appendleft(s0[s0_size - i])
+        if s0_size < s1_size:
+            for i in range(s0_size + 1, s1_size + 1):
+                out.appendleft(s1[s1_size - i])
+        if s1_size < s0_size:
+            for i in range(s1_size + 1, s0_size + 1):
+                out.appendleft(s0[s0_size - i])
+        return _expr.const(list(out), attr["T"].name)
+
+    return _impl
 
 def _broadcast_to():
     def _impl(inputs, attr, params, mod):
@@ -2550,6 +2585,7 @@ _convert_map = {
     "BatchToSpaceND": _batch_to_space_nd(),
     "BiasAdd": _bias_add(),
     "BroadcastTo": _broadcast_to(),
+    "BroadcastArgs": _broadcast_args(),
     "Cast": _cast(),
     "Ceil": AttrCvt("ceil"),
     "CheckNumerics": _check_numerics(),
@@ -2643,6 +2679,7 @@ _convert_map = {
     "Round": AttrCvt("round"),
     "Rsqrt": _rsqrt(),
     "Select": _where(),
+    "SelectV2": _where(),
     "Selu": _selu(),
     "Shape": _shape(),
     "Sigmoid": AttrCvt("sigmoid"),
