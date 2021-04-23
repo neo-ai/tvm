@@ -2789,6 +2789,7 @@ def test_forward_resize():
     _test_resize_nearest_neighbor((6, 32, 32, 3), [20, 20])
     _test_resize_nearest_neighbor_dynamic_shape((1, 16, 16, 3), scale=[2, 2])
 
+
 #######################################################################
 # BroadcastArgs
 # -----------

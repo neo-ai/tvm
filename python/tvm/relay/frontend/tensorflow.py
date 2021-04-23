@@ -1574,6 +1574,7 @@ def _bias_add():
 
     return _impl
 
+
 def _broadcast_args():
     def _impl(inputs, attr, params, mod):
         if isinstance(inputs[0], _expr.Var):
@@ -1609,6 +1610,7 @@ def _broadcast_args():
         return _expr.const(list(out), attr["T"].name)
 
     return _impl
+
 
 def _broadcast_to():
     def _impl(inputs, attr, params, mod):
