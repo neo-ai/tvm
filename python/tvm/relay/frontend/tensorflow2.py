@@ -40,22 +40,17 @@ from .common import infer_type as _infer_type
 
 from tensorflow.python.framework import function_def_to_graph
 
-from .tensorflow2_ops import set_span 
-from .tensorflow2_ops import convert_const_node 
-from .tensorflow2_ops import convert_place_holder
-from .tensorflow2_ops import parse_attr
-from .tensorflow2_ops import convert_map as tf2_convert_map
-from .tensorflow import _convert_map as tf1_convert_map
+from .tensorflow_ops import set_span 
+from .tensorflow_ops import convert_const_node 
+from .tensorflow_ops import convert_place_holder
+from .tensorflow_ops import parse_attr
+from .tensorflow_ops import _convert_map
+from .tensorflow_ops import _infer_type_with_prelude
+from .tensorflow_ops import _need_prelude_for_shape_inference
+
 
 __all__ = ["from_tensorflow"]
 
-
-def _infer_type_with_prelude(val, prelude):
-    body = _infer_type(val, prelude.mod)
-    return body.checked_type
-
-def _need_prelude_for_shape_inference(op):
-    return "TensorList" in op or "TensorArray" in op
 
 def detect_tf2_control_flow(_graph):
     tensorlist_ops = ["TensorListFromTensor", "TensorListGetItem",  "TensorListReserve", "TensorListSetItem", "TensorListStack"]
@@ -66,7 +61,6 @@ def detect_tf2_control_flow(_graph):
         for node in nodes:
             if node.op in tf2_ops:
                 return True
-            
         return False
 
     if check_tf2_nodes(_graph.node):
@@ -180,16 +174,11 @@ class GraphProto:
             sym = _convert_if(self._module, graph, inputs, attrs, self._prelude, gdef_lib=self._gdef_lib)
         elif op_name in ["StatelessWhile", "While"]:
             sym = _convert_loop(self._module, graph, inputs, attrs, node_name, self._tf_node_map, self._prelude, gdef_lib=self._gdef_lib)
-        elif op_name in tf2_convert_map:
+        elif op_name in _convert_map:
             if _need_prelude_for_shape_inference(op_name):
-                sym = tf2_convert_map[op_name](inputs, attrs, self._params, self._prelude)
+                sym = _convert_map[op_name](inputs, attrs, self._params, self._prelude)
             else:
-                sym = tf2_convert_map[op_name](inputs, attrs, self._params, self._module.mod)
-        elif op_name in tf1_convert_map:
-            if _need_prelude_for_shape_inference(op_name):
-                sym = tf1_convert_map[op_name](inputs, attrs, self._params, self._prelude)
-            else:
-                sym = tf1_convert_map[op_name](inputs, attrs, self._params, self._module.mod)
+                sym = _convert_map[op_name](inputs, attrs, self._params, self._module.mod)
         else:
             raise NotImplementedError("Operator {} not implemented.".format(op_name))
 
