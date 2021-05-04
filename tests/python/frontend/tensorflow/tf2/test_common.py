@@ -23,7 +23,7 @@ from tvm import relay
 
 from tvm.runtime.vm import VirtualMachine
 from tvm.contrib import graph_runtime
-from tvm.relay.frontend.tensorflow2 import from_tensorflow
+from tvm.relay.frontend.tensorflow import from_tensorflow
 import tvm.testing
 
 def vmobj_to_list(o):
@@ -88,8 +88,8 @@ def compare_tf_tvm(mod, input_, out):
 
     b = run_vm(mod, input_)
 
-    print(f'TF: {out}')
-    print(f'TVM: {b}')
+    # print(f'TF: {out}')
+    # print(f'TVM: {b}')
     tvm.testing.assert_allclose(out, b, atol=1e-5)
     print("Compare TVM/TF: Passed!")
 

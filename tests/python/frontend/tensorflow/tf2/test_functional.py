@@ -54,16 +54,16 @@ class Shape(tf.Module):
         return np.ones((3,2,3), dtype=np.float32)
 
     def expected_ops(self):
-        return ['Placeholder', 'Shape', 'Identity']
+        return ['Const', 'Identity', 'Placeholder', 'AddV2', 'Shape', 'Fill']
 
     def expected_lib_ops(self):
-        return ['Shape', 'Identity']
+        return ['AddV2', 'Const', 'Identity', 'Shape', 'Fill']
 
     """scalar as input"""
-
     @tf.function(input_signature=[tf.TensorSpec(shape=(3, 2, 3), dtype=tf.float32)])
     def func(self, x):
-        return tf.raw_ops.Shape(input=x)
+        a = tf.ones_like(tf.raw_ops.Shape(input=x), dtype=tf.float32)
+        return a + x
 
 
 class PackModel(tf.Module):
@@ -646,7 +646,7 @@ def _function_graph(TestClass):
     gdef = f.get_concrete_function().graph.as_graph_def()
     expect_ops = TestClass().expected_ops()
     gdef_ops = list(set([n.op for n in gdef.node]))
-    assert sorted_same(expect_ops, gdef_ops)
+    assert sorted_same(expect_ops, gdef_ops), print("Expected ops:: {}".format(gdef_ops))
     input = TestClass().get_input()
     output = run_tf_code(f, input)
     return gdef, input, output
@@ -671,7 +671,7 @@ def _model_graph(TestClass):
     lib_ops = list(lib_ops)
     expect_lib_ops = TestClass().expected_lib_ops()
 
-    assert sorted_same(expect_lib_ops, lib_ops)
+    assert sorted_same(expect_lib_ops, lib_ops), print("Expected ops:: {}".format(lib_ops))
     input = model.get_input()
     output = run_tf_code(f, input)
 
