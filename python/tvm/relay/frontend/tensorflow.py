@@ -40,6 +40,7 @@ from .common import infer_type as _infer_type
 from .common import infer_shape as _infer_shape
 from .common import infer_channels as _infer_channels
 from .common import infer_value as _infer_value
+from .common import infer_value_simulated as _infer_value_simulated
 
 __all__ = ["from_tensorflow"]
 
@@ -951,9 +952,9 @@ def _resize(method):
             # Important that the size is defined. If an axis is not, we need to infer what
             # the shape should be.
             if -1 in size:
-                size = _infer_value(inputs[1], params, mod).asnumpy().reshape([-1]).tolist()
+                size = _infer_value_simulated(inputs[1], params).asnumpy().reshape([-1]).tolist()
         else:
-            size = _infer_value(inputs[1], params, mod).asnumpy().reshape([-1]).tolist()
+            size = _infer_value_simulated(inputs[1], params).asnumpy().reshape([-1]).tolist()
 
         attr["size"] = size
         inputs.pop(1)
@@ -1183,7 +1184,11 @@ def _identityn():
 def _concatV2():
     def _impl(inputs, attr, params, mod):
         pop_node = inputs.pop(len(inputs) - 1)
-        axis = int(_get_num_param(params, pop_node))
+        try:
+            axis = int(_get_num_param(params, pop_node))
+        except (IndexError, KeyError, AttributeError):
+            axis = int(_infer_value(pop_node, params, mod).asnumpy().tolist())
+        
         return AttrCvt(op_name="concatenate", ignores=["T", "N", "Tidx"], extras={"axis": axis})(
             [inputs], attr
         )
@@ -1957,8 +1962,13 @@ def _stridedSlice():
         fshape_indices = None
         if begin_mask or end_mask or ellipsis_mask or new_axis_mask or shrink_axis_mask:
             begin, end, stride, fshape_indices = _transform_mask(stride_dim, ellipsis_mask)
-        out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
-        out_shape = _infer_shape(out, mod=mod)
+        if begin > end:
+            dtype = in_type.checked_type.dtype
+            out = _expr.const([],dtype = dtype)
+            out_shape = (0,)
+        else:
+            out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
+            out_shape = _infer_shape(out, mod=mod)
         if not fshape_indices:
             fshape_indices = range(len(out_shape))
 

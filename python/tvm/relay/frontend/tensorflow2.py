@@ -74,6 +74,7 @@ class GraphProto:
         self._params = {}
         self._nodes = {}
         self._input_shapes = {}
+        self._output_shapes = {}
         self._tf_node_map = {}
         self._gdef_lib = {}
 
@@ -93,7 +94,7 @@ class GraphProto:
                     in_type = input_types[node.name]
                 self._input_shapes[name], self._nodes[name] = convert_place_holder(shape, node, in_type)
             elif node.op == "Const":
-                sym, param = convert_const_node(node)
+                sym, param = convert_const_node(node, shape)
                 self._nodes[node.name] = sym
                 if param:
                     self._params[node.name] = param
@@ -211,12 +212,24 @@ class GraphProto:
             CallNode(Op(add), [Var(x, ty=TensorType([], float32)), Constant(1.0)], (nullptr), [])
 
         """
+        try:
+            from tensorflow.python.framework import tensor_util
+        except ImportError as e:
+            raise ImportError("Unable to import tensorflow which is required {}".format(e))
+
         input_op_name = node_name.split(":")[0].split("^")[-1]
         if input_op_name not in self._nodes:
             node = self._tf_node_map[input_op_name]
             attr = parse_attr(node.attr)
+            if "_output_shapes" in attr:
+                self._output_shapes[node.name] = [
+                    tensor_util.TensorShapeProtoToList(tshape)
+                    for tshape in attr["_output_shapes"]
+                ]
+            else:
+                self._output_shapes[node.name] = [None]
 
-            # attr["_output_shapes"] = self._output_shapes[input_op_name]
+            attr["_output_shapes"] = self._output_shapes[input_op_name]
             attr["_node_name"] = node.name
             attr["_target_layout"] = self._layout
             inputs = [self._backtrack_construct(graph, iname) for iname in node.input]

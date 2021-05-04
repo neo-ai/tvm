@@ -976,14 +976,21 @@ def set_span(sym, node_name):
 def _get_const_value(node):
     return node.attr["value"].tensor
 
-def convert_const_node(node):
+def convert_const_node(node, shape):
     """convert tf const node into relay const or var
     """
     tensor_value = _get_const_value(node)
     np_array = tensor_util.MakeNdarray(tensor_value)
 
     if np_array.dtype == np.dtype(object):
-        assert False # not tested, maybe tf string type?
+        # assert False # not tested, maybe tf string type?
+        if shape and node.name in shape:
+            var_shape = shape[node.name]
+        else:
+            var_shape = tensor_util.TensorShapeProtoToList(tensor_value.tensor_shape)
+        param = None
+        sym = [_expr.var(node.name, shape=var_shape, dtype="uint8")]
+        return sym, param
 
     if len(np_array.shape) == 0:
         param = None
@@ -1105,7 +1112,7 @@ def convert_place_holder(shape, node, in_type=None):
 
     if shape and node.name in shape:
         input_shape = list(shape[node.name])
-        assert False # not yet tested
+        # assert False # not yet tested
     else:
         input_shape = tensor_util.TensorShapeProtoToList(
             node.attr["shape"].shape
