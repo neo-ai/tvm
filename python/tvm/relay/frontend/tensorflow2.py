@@ -40,14 +40,15 @@ from .common import infer_type as _infer_type
 
 from tensorflow.python.framework import function_def_to_graph
 
-from .tensorflow_ops import set_span 
-from .tensorflow_ops import convert_const_node 
-from .tensorflow_ops import convert_place_holder
-from .tensorflow_ops import parse_attr
-from .tensorflow_ops import _convert_map
+from .tensorflow_ops import _convert_map as _convert_map_tf1
 from .tensorflow_ops import _infer_type_with_prelude
-from .tensorflow_ops import _need_prelude_for_shape_inference
 
+from .tensorflow2_ops import parse_attr
+from .tensorflow2_ops import _need_prelude_for_shape_inference
+from .tensorflow2_ops import _convert_map as _convert_map_tf2
+from .tensorflow2_ops import convert_place_holder
+from .tensorflow2_ops import set_span 
+from .tensorflow2_ops import convert_const_node 
 
 __all__ = ["from_tensorflow"]
 
@@ -174,11 +175,16 @@ class GraphProto:
             sym = _convert_if(self._module, graph, inputs, attrs, self._prelude, gdef_lib=self._gdef_lib)
         elif op_name in ["StatelessWhile", "While"]:
             sym = _convert_loop(self._module, graph, inputs, attrs, node_name, self._tf_node_map, self._prelude, gdef_lib=self._gdef_lib)
-        elif op_name in _convert_map:
+        elif op_name in _convert_map_tf1:
             if _need_prelude_for_shape_inference(op_name):
-                sym = _convert_map[op_name](inputs, attrs, self._params, self._prelude)
+                sym = _convert_map_tf1[op_name](inputs, attrs, self._params, self._prelude)
             else:
-                sym = _convert_map[op_name](inputs, attrs, self._params, self._module.mod)
+                sym = _convert_map_tf1[op_name](inputs, attrs, self._params, self._module.mod)
+        elif op_name in _convert_map_tf2:
+            if _need_prelude_for_shape_inference(op_name):
+                sym = _convert_map_tf2[op_name](inputs, attrs, self._params, self._prelude)
+            else:
+                sym = _convert_map_tf2[op_name](inputs, attrs, self._params, self._module.mod)
         else:
             raise NotImplementedError("Operator {} not implemented.".format(op_name))
 
