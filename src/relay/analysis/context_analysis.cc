@@ -692,11 +692,15 @@ class ContextAnalyzer : public MixedModeVisitor {
 
 AnalysisResultMap ContextAnalysis(const IRModule& mod, const TVMContext& default_context) {
   // TODO(@zhiics) Apply the pass to all functions/entries
-  auto entry = mod->GetGlobalVar("main");
-  auto ca = analysis::ContextAnalyzer(mod, entry, default_context);
-  auto expr = mod->Lookup(entry);
-  ca.VisitExpr(expr);
-  return ca.Results();
+  AnalysisResultMap final_map;
+  for(auto entry : mod->GetGlobalVars()) {
+    auto ca = analysis::ContextAnalyzer(mod, entry, default_context);
+    auto expr = mod->Lookup(entry);
+    ca.VisitExpr(expr);
+    auto cur_map = ca.Results();
+    final_map.insert(cur_map.begin(), cur_map.end());
+  }
+  return final_map;
 }
 
 // Unpack the device type and deivce id fields in TVMContext for PackedFunc calls
