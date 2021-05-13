@@ -1071,9 +1071,12 @@ def _batch_matmul():
             outer_dims = [orig_shape_x[i] for i in range(0, len(orig_shape_x) - 2)]
             num_outer_elts = np.prod(outer_dims)
             new_shape_x = (num_outer_elts, orig_shape_x[-2], orig_shape_x[-1])
-            new_shape_y = (num_outer_elts, orig_shape_y[-2], orig_shape_y[-1])
             input_x = _op.reshape(input_x, newshape=new_shape_x)
-            input_y = _op.reshape(input_y, newshape=new_shape_y)
+            new_shape_y = (num_outer_elts, orig_shape_y[-2], orig_shape_y[-1])
+            if (np.prod(orig_shape_y) == np.prod(new_shape_y)):
+                input_y = _op.reshape(input_y, newshape=new_shape_y)
+            else:
+                input_y = _op.broadcast_to(input_y, new_shape_y)
 
         adj_x = attr["adj_x"]
         adj_y = attr["adj_y"]
