@@ -693,7 +693,7 @@ class ContextAnalyzer : public MixedModeVisitor {
 AnalysisResultMap ContextAnalysis(const IRModule& mod, const TVMContext& default_context) {
   // TODO(@zhiics) Apply the pass to all functions/entries
   AnalysisResultMap final_map;
-  for(auto entry : mod->GetGlobalVars()) {
+  for (auto entry : mod->GetGlobalVars()) {
     auto ca = analysis::ContextAnalyzer(mod, entry, default_context);
     auto expr = mod->Lookup(entry);
     ca.VisitExpr(expr);

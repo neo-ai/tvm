@@ -771,8 +771,8 @@ inline Array<Tensor> split_sections(const Tensor& x, int num_sections, int axis,
  * \return A Tensor whose op member is the take operation
  */
 inline Tensor take(const Tensor& a, const Tensor& indices, int batch_dims,
-                   std::string mode = "clip", std::string name = "T_take", 
-		   std::string tag = kInjective) {
+                   std::string mode = "clip", std::string name = "T_take",
+                   std::string tag = kInjective) {
   Array<PrimExpr> a_shape = a->shape;
   Array<PrimExpr> out_shape = indices->shape;
   PrimExpr a_size = 1;
