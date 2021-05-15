@@ -2009,8 +2009,15 @@ def _stridedSlice():
         fshape_indices = None
         if begin_mask or end_mask or ellipsis_mask or new_axis_mask or shrink_axis_mask:
             begin, end, stride, fshape_indices = _transform_mask(stride_dim, ellipsis_mask)
-        out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
-        out_shape = _infer_shape(out, mod=mod)
+        if begin > end:
+            dtype = in_type.checked_type.dtype
+            out = _expr.const([],dtype = dtype)
+            out_shape = (0,)
+        else:
+            out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
+            out_shape = _infer_shape(out, mod=mod)
+        # out = _op.strided_slice(inputs[0], begin=begin, end=end, strides=stride)
+        # out_shape = _infer_shape(out, mod=mod)
         if not fshape_indices:
             fshape_indices = range(len(out_shape))
 
