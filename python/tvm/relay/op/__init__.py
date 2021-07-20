@@ -57,6 +57,8 @@ from . import _algorithm
 # mlas
 from .mlas import *
 from . import _mlas
+from .neo_op import *
+from . import _neo_op
 
 
 def _register_op_make():

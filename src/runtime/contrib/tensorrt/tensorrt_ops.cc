@@ -1182,6 +1182,28 @@ class BatchMatmulOpConverter : public TensorRTOpConverter {
   }
 };
 
+class NeoBatchMatmulOpConverter : public TensorRTOpConverter {
+ public:
+  NeoBatchMatmulOpConverter() : TensorRTOpConverter({kTensor, kTensor}) {}
+
+  void Convert(TensorRTOpConverterParams* params) const {
+    auto transb = std::stoi(params->node.GetAttr<std::vector<std::string>>("transb")[0]);
+    LOG(INFO) << "neo_batch_matmul" << transb;
+    nvinfer1::IMatrixMultiplyLayer* matmul_layer;
+    if (transb) {
+      matmul_layer = params->network->addMatrixMultiply(
+          *params->inputs.at(0).tensor, nvinfer1::MatrixOperation::kNONE,
+          *params->inputs.at(1).tensor, nvinfer1::MatrixOperation::kTRANSPOSE);
+    } else {
+      matmul_layer = params->network->addMatrixMultiply(
+          *params->inputs.at(0).tensor, nvinfer1::MatrixOperation::kNONE,
+          *params->inputs.at(1).tensor, nvinfer1::MatrixOperation::kNONE);
+    }
+    ICHECK(matmul_layer != nullptr);
+    params->outputs.push_back(matmul_layer->getOutput(0));
+  }
+};
+
 const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<TensorRTOpConverter>>>
 GetOpConverters() {
   static auto map =
@@ -1230,6 +1252,7 @@ GetOpConverters() {
   map->emplace("nn.adaptive_max_pool2d", std::make_shared<AdaptivePoolingOpConverter>());
   map->emplace("nn.adaptive_avg_pool2d", std::make_shared<AdaptivePoolingOpConverter>());
   map->emplace("nn.batch_matmul", std::make_shared<BatchMatmulOpConverter>());
+  map->emplace("neo_batch_matmul", std::make_shared<NeoBatchMatmulOpConverter>());
 #if TRT_VERSION_GE(5, 1, 5)
   map->emplace("clip", std::make_shared<ActivationOpConverter>());
   map->emplace("nn.leaky_relu", std::make_shared<ActivationOpConverter>());

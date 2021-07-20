@@ -24,6 +24,7 @@ from tvm.relay import transform
 from tvm.relay.build_module import bind_params_by_name
 from tvm.relay.expr import Call, Constant, Tuple, GlobalVar, Var, TupleGetItem
 from tvm.relay.expr_functor import ExprMutator, ExprVisitor
+from tvm.relay.op.contrib.tensorrt_neo_op import rewrite_batch_matmul
 
 logger = logging.getLogger("TensorRT")
 
@@ -85,6 +86,7 @@ def partition_for_tensorrt(
     use_implicit_batch=True,
     remove_no_mac_subgraphs=False,
     max_workspace_size=1 << 30,
+    use_neo_batch_matmul=True
 ):
     """Partition the graph greedily offloading supported operators to TensorRT.
 
@@ -131,7 +133,8 @@ def partition_for_tensorrt(
             )
             linked_version = (6, 0, 1)
         config["tensorrt_version"] = linked_version
-
+    if use_neo_batch_matmul:
+        mod = rewrite_batch_matmul(mod)
     if params:
         mod["main"] = bind_params_by_name(mod["main"], params)
     seq = tvm.transform.Sequential(
@@ -1046,3 +1049,18 @@ class RemoveDropout(ExprMutator):
 class RemoveDropoutPass:
     def transform_function(self, func, mod, _):
         return RemoveDropout().visit(func)
+
+
+@_register_external_dynamic_check_func("neo_batch_matmul")
+def neo_batch_matmul_annotate_fn(expr):
+    """Check if neo_batch_matmul is supported by TensorRT."""
+
+    if any([x.checked_type.dtype != "float32" for x in expr.args]):
+        logger.info("Only float32 inputs are supported for TensorRT.")
+        return False
+    if get_tensorrt_use_implicit_batch_mode() and len(expr.args[0].checked_type.shape) != len(
+        expr.args[1].checked_type.shape
+    ):
+        logger.info("neo_batch_matmul: requires use_implict_batch=False.")
+        return False
+    return True
