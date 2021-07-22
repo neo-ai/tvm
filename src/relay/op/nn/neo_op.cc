@@ -33,7 +33,7 @@ namespace relay {
 TVM_REGISTER_NODE_TYPE(NeoBatchMatmulAttrs);
 
 bool NeoBatchMatmulRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
-                   const TypeReporter& reporter) {
+                       const TypeReporter& reporter) {
   ICHECK_EQ(types.size(), 3);
   const auto* A = types[0].as<TensorTypeNode>();
   const auto* B = types[1].as<TensorTypeNode>();
@@ -65,28 +65,25 @@ bool NeoBatchMatmulRel(const Array<Type>& types, int num_inputs, const Attrs& at
   } else {
     if (param->transb) {
       oshape.push_back(B->shape[1]);
-    }
-    else{
+    } else {
       oshape.push_back(B->shape[2]);
     }
   }
 
   if (!is_dyn) {
     ICHECK(reporter->AssertEQ(A->shape[0], B->shape[0]) || reporter->AssertEQ(A->shape[0], 1) ||
-            reporter->AssertEQ(B->shape[0], 1))
+           reporter->AssertEQ(B->shape[0], 1))
         << "MlasMatmulRel: batch dimensions don't match, "
         << " A shape=" << A->shape << ", B shape=" << B->shape;
     if (param->transb) {
       ICHECK(reporter->AssertEQ(A->shape[2], B->shape[2]))
           << "MlasMatmulRel (transb=True): shapes of A and B are inconsistent, "
           << " A shape=" << A->shape << ", B shape=" << B->shape;
-    }
-    else {
+    } else {
       ICHECK(reporter->AssertEQ(A->shape[2], B->shape[1]))
           << "MlasMatmulRel (transb=False): shapes of A and B are inconsistent, "
-          << " A shape=" << A->shape << ", B shape=" << B->shape;   
+          << " A shape=" << A->shape << ", B shape=" << B->shape;
     }
-
   }
 
   reporter->Assign(types[2], TensorType(oshape, A->dtype));

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 # pylint: disable=invalid-name
-"""MLAS relay operators"""
+"""Custom Neo relay operators"""
 from . import _make
 
 
@@ -25,10 +25,10 @@ def neo_batch_matmul(A, B, transb=True):
 
     Parameters
     ----------
-    A : tvm.te.Tensor
+    A : tvm.relay.Expr
         3-D with shape [batch, M, K]
 
-    B : tvm.te.Tensor
+    B : tvm.relay.Expr
         3-D with shape [batch, N, K] or [batch, K, N]
 
     transb : bool
@@ -36,7 +36,7 @@ def neo_batch_matmul(A, B, transb=True):
 
     Returns
     -------
-    output : tvm.te.Tensor
+    output : tvm.relay.Expr
         3-D with shape [batch, M, N]
     """
     return _make.neo_batch_matmul(A, B, transb)

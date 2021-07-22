@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 # pylint: disable=invalid-name,unused-argument
-"""Strategy and AlterOpLayout functions of MLAS operators"""
+"""Relay op strategies of custom Neo operators"""
 import tvm
 from tvm import topi
 from .strategy import wrap_topi_schedule

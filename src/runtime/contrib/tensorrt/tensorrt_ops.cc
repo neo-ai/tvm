@@ -1188,7 +1188,6 @@ class NeoBatchMatmulOpConverter : public TensorRTOpConverter {
 
   void Convert(TensorRTOpConverterParams* params) const {
     auto transb = std::stoi(params->node.GetAttr<std::vector<std::string>>("transb")[0]);
-    LOG(INFO) << "neo_batch_matmul" << transb;
     nvinfer1::IMatrixMultiplyLayer* matmul_layer;
     if (transb) {
       matmul_layer = params->network->addMatrixMultiply(

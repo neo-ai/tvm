@@ -24,7 +24,13 @@ from tvm.relay import transform
 from tvm.relay.build_module import bind_params_by_name
 from tvm.relay.expr import Call, Constant, Tuple, GlobalVar, Var, TupleGetItem
 from tvm.relay.expr_functor import ExprMutator, ExprVisitor
-from tvm.relay.op.contrib.tensorrt_neo_op import rewrite_batch_matmul
+from tvm.relay.dataflow_pattern import (
+    DFPatternCallback,
+    wildcard,
+    rewrite,
+    is_op,
+    is_constant,
+)
 
 logger = logging.getLogger("TensorRT")
 
@@ -79,6 +85,62 @@ def get_tensorrt_remove_no_mac_subgraphs():
     return False
 
 
+def rewrite_batch_matmul(mod):
+    """Rewrite relay graph using the following two rules:
+       1. C = nn.batch_matmul(A, transpose(B, [0,2,1])) => C = neo_batch_matmul(A, B, False)
+       2. B is constant, C = nn.batch_matmul(A, B) => C = neo_batch_matmul(A, 
+          transpose(B, [0,2,1]), False)
+    Inputs:
+    mod: tvm.IRModule
+    Returns
+    -------
+    ret: tvm.IRModule
+    """
+
+    class BatchMatmulRewriteRule1(DFPatternCallback):
+        """Helper class of rewrite rule:
+        C = nn.batch_matmul(A, transpose(B, [0, 2, 1])) => C = neo_batch_matmul(A, B, False)
+        """
+
+        def __init__(self):
+            super(BatchMatmulRewriteRule1, self).__init__()
+            self.A = wildcard()
+            self.B = wildcard()
+            transpose = is_op("transpose")
+            batch_matmul = is_op("nn.batch_matmul")
+            expr = batch_matmul(self.A, transpose(self.B).has_attr({"axes": [0, 2, 1]}))
+            self.pattern = expr
+
+        def callback(self, pre, post, node_map):
+            A = node_map[self.A][0]
+            B = node_map[self.B][0]
+            return relay.op.neo_batch_matmul(A, B, False)
+
+    class BatchMatmulRewriteRule2(DFPatternCallback):
+        """Helper class of rewrite rule:
+        C = nn.batch_matmul(A, B(const)) => C = neo_batch_matmul(A, transpose(B, [0, 2, 1]), False)
+        """
+
+        def __init__(self):
+            super(BatchMatmulRewriteRule2, self).__init__()
+            self.A = wildcard()
+            self.B = is_constant()
+            batch_matmul = is_op("nn.batch_matmul")
+            expr = batch_matmul(self.A, self.B)
+            self.pattern = expr
+
+        def callback(self, pre, post, node_map):
+            A = node_map[self.A][0]
+            B = node_map[self.B][0]
+            return relay.op.neo_batch_matmul(A, relay.transpose(B, axes=[0, 2, 1]), False)
+
+    expr = mod["main"]
+    expr = rewrite(BatchMatmulRewriteRule1(), expr)
+    expr = rewrite(BatchMatmulRewriteRule2(), expr)
+    mod = tvm.IRModule.from_expr(expr)
+    return mod
+
+
 def partition_for_tensorrt(
     mod,
     params=None,
@@ -86,7 +148,7 @@ def partition_for_tensorrt(
     use_implicit_batch=True,
     remove_no_mac_subgraphs=False,
     max_workspace_size=1 << 30,
-    use_neo_batch_matmul=True
+    use_neo_batch_matmul=True,
 ):
     """Partition the graph greedily offloading supported operators to TensorRT.
 
@@ -133,8 +195,10 @@ def partition_for_tensorrt(
             )
             linked_version = (6, 0, 1)
         config["tensorrt_version"] = linked_version
+
     if use_neo_batch_matmul:
         mod = rewrite_batch_matmul(mod)
+
     if params:
         mod["main"] = bind_params_by_name(mod["main"], params)
     seq = tvm.transform.Sequential(
