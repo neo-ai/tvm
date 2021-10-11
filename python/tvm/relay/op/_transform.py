@@ -845,3 +845,23 @@ def where_shape_func(attrs, inputs, _):
     out_shape = _broadcast_shape_tensors(bcast_shape, cond_shape)
 
     return [out_shape]
+
+
+@script
+def _gather_shape(data_shape, indices_shape, axis):
+    out_shape = output_tensor((data_shape.shape[0],), "int64")
+    for i in range(data_shape.shape[0]):
+        if i != axis:
+            assert (
+                data_shape[i] == indices_shape[i]
+            ), "data and indices size at non-gather axes must be the same"
+        out_shape[i] = indices_shape[i]
+    return out_shape
+
+
+@_reg.register_shape_func("gather", False)
+def gather_shape_func(attrs, inputs, _):
+    """
+    Shape func for gather operator.
+    """
+    return [_gather_shape(inputs[0], inputs[1], attrs.axis)]
