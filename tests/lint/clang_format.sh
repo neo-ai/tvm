@@ -19,4 +19,4 @@
 
 # check lastest change, for squash merge into main
 ./tests/lint/git-clang-format.sh HEAD~1
-./tests/lint/git-clang-format.sh origin/dev
+./tests/lint/git-clang-format.sh origin/release-1.10.0
