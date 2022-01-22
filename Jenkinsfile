@@ -324,16 +324,6 @@ stage('Build') {
       Utils.markStageSkippedForConditional('BUILD: i386')
     }
   },
-  // 'BUILD : arm': {
-  //   node('ARM') {
-  //     ws(per_exec_ws("tvm/build-arm")) {
-  //       init_git()
-  //       sh "${docker_run} ${ci_arm} ./tests/scripts/task_config_build_arm.sh"
-  //       make(ci_arm, 'build', '-j4')
-  //       pack_lib('arm', tvm_multilib)
-  //     }
-  //   }
-  // },
   'BUILD: QEMU': {
     if (is_docs_only_build != 1) {
       node('CPU') {
@@ -431,54 +421,32 @@ stage('Unit Test') {
             }
           }
         }
-     } else {
+      } else {
         Utils.markStageSkippedForConditional('python3: i386')
       }
-    },
-    // 'python3: arm': {
-    //   if (is_docs_only_build != 1) {
-    //     node('ARM') {
-    //       ws(per_exec_ws('tvm/ut-python-arm')) {
-    //         init_git()
-    //         unpack_lib('arm', tvm_multilib)
-    //         timeout(time: max_time, unit: 'MINUTES') {
-    //           ci_setup(ci_arm)
-    //           python_unittest(ci_arm)
-    //           sh (
-    //             script: "${docker_run} ${ci_arm} ./tests/scripts/task_python_arm_compute_library.sh",
-    //             label: "Run test_arm_compute_lib test",
-    //           )
-    //           junit "build/pytest-results/*.xml"
-    //         // sh "${docker_run} ${ci_arm} ./tests/scripts/task_python_integration.sh"
-    //         }
-    //       }
-    //     }
-    //   } else {
-    //      Utils.markStageSkippedForConditional('python3: arm')
-    //   }
-    // },
+    }
 }
 
 stage('Integration Test') {
   parallel 'topi: GPU': {
-  if (is_docs_only_build != 1) {
-    node('GPU') {
-      ws(per_exec_ws('tvm/topi-python-gpu')) {
-        init_git()
-        unpack_lib('gpu', tvm_multilib)
-        timeout(time: max_time, unit: 'MINUTES') {
-          ci_setup(ci_gpu)
-          sh (
-            script: "${docker_run} ${ci_gpu} ./tests/scripts/task_python_topi.sh",
-            label: "Run TOPI tests",
-          )
-          junit "build/pytest-results/*.xml"
+    if (is_docs_only_build != 1) {
+      node('GPU') {
+        ws(per_exec_ws('tvm/topi-python-gpu')) {
+          init_git()
+          unpack_lib('gpu', tvm_multilib)
+          timeout(time: max_time, unit: 'MINUTES') {
+            ci_setup(ci_gpu)
+            sh (
+              script: "${docker_run} ${ci_gpu} ./tests/scripts/task_python_topi.sh",
+              label: "Run TOPI tests",
+            )
+            junit "build/pytest-results/*.xml"
+          }
         }
       }
-    }
     } else {
       Utils.markStageSkippedForConditional('topi: GPU')
-  }
+    }
   },
   'frontend: GPU': {
     if (is_docs_only_build != 1) {
@@ -536,61 +504,4 @@ stage('Integration Test') {
       }
     }
   }
-  // 'docs: GPU': {
-  //   node('TensorCore') {
-  //     ws(per_exec_ws("tvm/docs-python-gpu")) {
-  //       init_git()
-  //       unpack_lib('gpu', tvm_multilib)
-  //       timeout(time: max_time, unit: 'MINUTES') {
-  //         sh "${docker_run} ${ci_gpu} ./tests/scripts/task_ci_setup.sh"
-  //         sh "${docker_run} ${ci_gpu} ./tests/scripts/task_python_docs.sh"
-  //       }
-  //       pack_lib('mydocs', 'docs.tgz')
-  //     }
-  //   }
-  // }
-  // TODO: Fix the doc
-  // 'docs: GPU': {
-  //   node('TensorCore') {
-  //     ws(per_exec_ws("tvm/docs-python-gpu")) {
-  //       init_git()
-  //       unpack_lib('gpu', tvm_multilib)
-  //       timeout(time: max_time, unit: 'MINUTES') {
-  //         sh "${docker_run} ${ci_gpu} ./tests/scripts/task_ci_python_setup.sh"
-  //         sh "${docker_run} ${ci_gpu} ./tests/scripts/task_python_docs.sh"
-  //       }
-  //       pack_lib('mydocs', 'docs.tgz')
-  //     }
-  //   }
 }
-
-/*
-stage('Build packages') {
-  parallel 'conda CPU': {
-    node('CPU') {
-      sh "${docker_run} tlcpack/conda-cpu ./conda/build_cpu.sh
-    }
-  },
-  'conda cuda': {
-    node('CPU') {
-      sh "${docker_run} tlcpack/conda-cuda90 ./conda/build_cuda.sh
-      sh "${docker_run} tlcpack/conda-cuda100 ./conda/build_cuda.sh
-    }
-  }
-// Here we could upload the packages to anaconda for releases
-// and/or the main branch
-}
-*/
-
-/*
-stage('Deploy') {
-    node('doc') {
-      ws(per_exec_ws('tvm/deploy-docs')) {
-        if (env.BRANCH_NAME == 'main') {
-        unpack_lib('mydocs', 'docs.tgz')
-        sh 'cp docs.tgz /var/docs/docs.tgz'
-        sh 'tar xf docs.tgz -C /var/docs'
-        }
-      }
-    }
-}*/
