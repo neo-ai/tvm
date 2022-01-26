@@ -25,7 +25,6 @@ from tvm.ir import IRModule
 from tvm.topi.utils import get_const_tuple
 
 from .. import expr as _expr
-from ..expr_functor import ExprMutator
 from .. import function as _function
 from .. import transform as _transform
 from .. import op as _op
@@ -996,6 +995,7 @@ def set_span(sym, node_name):
         def visit_tuple_getitem(self, op):
             if op.span is None:
                 self.distance_from_leaf += 1
+                # pylint: disable=too-many-function-args
                 return _expr.TupleGetItem(self.visit(op.tuple_value), op.index, self._create_span())
             return op
 
