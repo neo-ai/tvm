@@ -519,23 +519,24 @@ stage('Integration Test') {
     } else {
       Utils.markStageSkippedForConditional('frontend: CPU')
     }
-  },
-  'docs: GPU': {
-    node('TensorCore') {
-      ws(per_exec_ws('tvm/docs-python-gpu')) {
-        init_git()
-        unpack_lib('gpu', tvm_multilib)
-        timeout(time: max_time, unit: 'MINUTES') {
-          ci_setup(ci_gpu)
-          sh (
-            script: "${docker_run} ${ci_gpu} ./tests/scripts/task_python_docs.sh",
-            label: "Build docs",
-          )
-        }
-        pack_lib('mydocs', 'docs.tgz')
-      }
-    }
   }
+}
+  // 'docs: GPU': {
+  //   node('TensorCore') {
+  //     ws(per_exec_ws('tvm/docs-python-gpu')) {
+  //       init_git()
+  //       unpack_lib('gpu', tvm_multilib)
+  //       timeout(time: max_time, unit: 'MINUTES') {
+  //         ci_setup(ci_gpu)
+  //         sh (
+  //           script: "${docker_run} ${ci_gpu} ./tests/scripts/task_python_docs.sh",
+  //           label: "Build docs",
+  //         )
+  //       }
+  //       pack_lib('mydocs', 'docs.tgz')
+  //     }
+  //   }
+  // }
   // 'docs: GPU': {
   //   node('TensorCore') {
   //     ws(per_exec_ws("tvm/docs-python-gpu")) {
@@ -562,7 +563,7 @@ stage('Integration Test') {
   //       pack_lib('mydocs', 'docs.tgz')
   //     }
   //   }
-}
+  // }
 
 /*
 stage('Build packages') {
