@@ -360,8 +360,8 @@ stage('Build') {
   }
 }
 
-stage('Unit Test') {
-    parallel 'python3: GPU': {
+stage('Test') {
+    parallel 'unittest: GPU': {
       if (is_docs_only_build != 1) {
         node('TensorCore') {
           ws(per_exec_ws('tvm/ut-python-gpu')) {
@@ -390,10 +390,10 @@ stage('Unit Test') {
           }
         }
       } else {
-        Utils.markStageSkippedForConditional('python3: GPU')
+        Utils.markStageSkippedForConditional('unittest: GPU')
       }
     },
-    'python3: CPU': {
+    'unittest: CPU': {
       if (is_docs_only_build != 1) {
         node('CPU') {
           ws(per_exec_ws("tvm/ut-python-cpu")) {
@@ -410,10 +410,10 @@ stage('Unit Test') {
           }
         }
       } else {
-        Utils.markStageSkippedForConditional('python3: CPU')
+        Utils.markStageSkippedForConditional('unittest: CPU')
       }
     },
-    'python3: i386': {
+    'unittest: i386': {
       if (is_docs_only_build != 1) {
         node('CPU') {
           ws(per_exec_ws('tvm/ut-python-i386')) {
@@ -432,9 +432,9 @@ stage('Unit Test') {
           }
         }
       } else {
-        Utils.markStageSkippedForConditional('python3: i386')
+        Utils.markStageSkippedForConditional('unittest: i386')
       }
-    }
+    },
     // 'python3: arm': {
     //   if (is_docs_only_build != 1) {
     //     node('ARM') {
@@ -457,10 +457,7 @@ stage('Unit Test') {
     //      Utils.markStageSkippedForConditional('python3: arm')
     //   }
     // },
-  }
-
-stage('Integration Test') {
-  parallel 'topi: GPU': {
+  'topi: GPU': {
     if (is_docs_only_build != 1) {
       node('GPU') {
         ws(per_exec_ws('tvm/topi-python-gpu')) {
