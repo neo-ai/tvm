@@ -92,7 +92,7 @@ $(foreach CMAKE_TARGET,$(CMAKE_TARGETS),$(eval $(GEN_CMAKE_RULE)))
 # scripts that are executed in the CI should be in tests/lint. This
 # allows docker/lint.sh to behave similarly to the CI.
 format:
-	./tests/lint/git-clang-format.sh -i origin/release-1.11.0
+	./tests/lint/git-clang-format.sh -i origin/release-1.11.1
 	black .
 	cd rust && which cargo && cargo fmt --all
 

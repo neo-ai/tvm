@@ -24,7 +24,7 @@ DOCS_DIR=0
 OTHER_DIR=0
 DOC_DIR="docs/"
 
-changed_files=`git diff --no-commit-id --name-only -r origin/release-1.11.0`
+changed_files=`git diff --no-commit-id --name-only -r origin/release-1.11.1`
 
 for file in $changed_files; do
     FOUND_ONE_FILE=1
