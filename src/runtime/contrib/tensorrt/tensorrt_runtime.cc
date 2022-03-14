@@ -85,8 +85,8 @@ class TensorRTRuntime : public JSONRuntimeBase {
     ICHECK_EQ(consts.size(), const_idx_.size())
         << "The number of input constants must match the number of required.";
     LoadGlobalAttributes();
-    if (GetCachedEnginesFromDisk()) return;
     SetupConstants(consts);
+    GetCachedEnginesFromDisk();
     multi_engine_mode_ = dmlc::GetEnv("TVM_TENSORRT_MULTI_ENGINE", false);
   }
 
@@ -305,10 +305,11 @@ class TensorRTRuntime : public JSONRuntimeBase {
     std::istringstream is(serialized_meta);
     dmlc::JSONReader reader(&is);
     dmlc::JSONObjectReadHelper helper;
+    int batch_size;
     helper.DeclareField("inputs", &engine_and_context.inputs);
     helper.DeclareField("outputs", &engine_and_context.outputs);
+    helper.DeclareField("batch_size", &batch_size);
     helper.ReadAllFields(&reader);
-    const int batch_size = GetBatchSize();
     trt_engine_cache_[std::make_pair(symbol_name_, batch_size)] = engine_and_context;
     return true;
   }
@@ -337,6 +338,7 @@ class TensorRTRuntime : public JSONRuntimeBase {
                                trt_engine_cache_[std::make_pair(symbol_name_, batch_size)].inputs);
     writer.WriteObjectKeyValue("outputs",
                                trt_engine_cache_[std::make_pair(symbol_name_, batch_size)].outputs);
+    writer.WriteObjectKeyValue("batch_size", batch_size);
     writer.EndObject();
     std::string meta_path = cache_dir + "/" + key + ".meta";
     SaveBinaryToFile(meta_path, os.str());
