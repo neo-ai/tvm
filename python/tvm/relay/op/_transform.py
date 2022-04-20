@@ -131,6 +131,24 @@ def compute_reshape(attrs, inputs, output_type):
 
 _reg.register_strategy("sparse_reshape", strategy.sparse_reshape_strategy)
 
+# stft
+@_reg.register_compute("stft")
+def compute_stft(attrs, inputs, output_type):
+    """Compute definition of stft"""
+    return topi.stft(
+        inputs[0],
+        attrs.n_fft,
+        attrs.hop_length,
+        attrs.win_length,
+        attrs.window,
+        attrs.normalized,
+        attrs.onesided,
+        output_type.shape,
+    )
+
+
+_reg.register_strategy("stft", strategy.stft_strategy)
+
 # scatter_add
 @_reg.register_compute("scatter_add")
 def compute_scatter_add(attrs, inputs, output_type):

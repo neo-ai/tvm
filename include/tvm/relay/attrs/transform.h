@@ -497,6 +497,37 @@ struct UniqueAttrs : public tvm::AttrsNode<UniqueAttrs> {
   }
 };  // struct UniqueAttrs
 
+/*! \brief Attributes used in einsum operator */
+struct EinsumAttrs : public tvm::AttrsNode<EinsumAttrs> {
+  String equation;
+
+  TVM_DECLARE_ATTRS(EinsumAttrs, "relay.attrs.EinsumAttrs") {
+    TVM_ATTR_FIELD(equation).describe("The einsum expression string");
+  }
+};  // struct EinsumAttrs
+
+/*! \brief Attributes used in stft operator */
+struct StftAttrs : public tvm::AttrsNode<StftAttrs> {
+  int n_fft;
+  int hop_length;
+  int win_length;
+  bool normalized;
+  bool onesided;
+
+  TVM_DECLARE_ATTRS(StftAttrs, "relay.attrs.StftAttrs") {
+    TVM_ATTR_FIELD(n_fft).set_default(-1).describe("The size of Fourier transform");
+    TVM_ATTR_FIELD(hop_length)
+        .set_default(-1)
+        .describe("The distance between neighboring sliding window frames");
+    TVM_ATTR_FIELD(win_length).set_default(-1).describe("The size of window frame and STFT filter");
+    TVM_ATTR_FIELD(normalized)
+        .set_default(false)
+        .describe("Whether to return the normalized STFT results");
+    TVM_ATTR_FIELD(onesided).set_default(true).describe(
+        "Whether to return onesided result or fill with conjugate symmetry");
+  }
+};  // struct StftAttrs
+
 }  // namespace relay
 }  // namespace tvm
 #endif  // TVM_RELAY_ATTRS_TRANSFORM_H_

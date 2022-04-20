@@ -1135,3 +1135,39 @@ def schedule_transpose_cuda(attrs, outs, target):
     ):
         return topi.cuda.schedule_transpose(outs)
     return schedule_injective(attrs, outs, target)
+
+
+@invert_permutation_strategy.register(["cuda", "gpu"])
+def invert_permutation_strategy_cuda(attrs, inputs, out_type, target):
+    """invert_permutation cuda strategy"""
+    strategy = _op.OpStrategy()
+    strategy.add_implementation(
+        wrap_compute_invert_permutation(topi.cuda.invert_permutation),
+        wrap_topi_schedule(topi.cuda.vision._default_schedule),
+        name="invert_permutation.cuda",
+    )
+    return strategy
+
+
+@einsum_strategy.register(["cuda", "gpu"])
+def einsum_strategy_cuda(attrs, inputs, out_type, target):
+    """einsum cuda strategy"""
+    strategy = _op.OpStrategy()
+    # TODO: Add cuda-specific op implementation for einsum
+    strategy.add_implementation(
+        wrap_compute_einsum(topi.einsum),
+        wrap_topi_schedule(topi.generic.schedule_extern),
+        name="einsum.cuda",
+    )
+    return strategy
+
+
+@stft_strategy.register(["cuda", "gpu"])
+def stft_strategy_cuda(attrs, inputs, out_type, target):
+    strategy = _op.OpStrategy()
+    strategy.add_implementation(
+        wrap_compute_stft(topi.cuda.stft),
+        wrap_topi_schedule(topi.generic.schedule_extern),
+        name="stft.cuda",
+    )
+    return strategy
