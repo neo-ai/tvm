@@ -64,21 +64,11 @@ EMCC_FLAGS= -std=c++11\
 
 web: $(OUTPUTDIR)/libtvm_web_runtime.js $(OUTPUTDIR)/libtvm_web_runtime.bc
 
-<<<<<<< HEAD
 $(OUTPUTDIR)/libtvm_web_runtime.bc: web/web_runtime.cc
 	@mkdir -p $(OUTPUTDIR)/web
 	@mkdir -p $(@D)
 	emcc $(EMCC_FLAGS) -MM -MT $(OUTPUTDIR)/libtvm_web_runtime.bc $< >$(OUTPUTDIR)/web/web_runtime.d
 	emcc $(EMCC_FLAGS) -o $@ web/web_runtime.cc
-=======
-# Dev tools for formatting, linting, and documenting.  NOTE: lint
-# scripts that are executed in the CI should be in tests/lint. This
-# allows docker/lint.sh to behave similarly to the CI.
-format:
-	./tests/lint/git-clang-format.sh -i origin/release-1.11.2
-	black .
-	cd rust && which cargo && cargo fmt --all
->>>>>>> c494074d1... Add: relay stft operator support.
 
 $(OUTPUTDIR)/libtvm_web_runtime.js: $(OUTPUTDIR)/libtvm_web_runtime.bc
 	@mkdir -p $(@D)
@@ -146,7 +136,7 @@ jvminstall:
 			-Dcflags="$(PKG_CFLAGS)" -Dldflags="$(PKG_LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/$(OUTPUTDIR)" $(JVM_TEST_ARGS))
 format:
-	./tests/lint/git-clang-format.sh -i origin/main
+	./tests/lint/git-clang-format.sh -i origin/release-1.10.1
 	black .
 	cd rust; which cargo && cargo fmt --all; cd ..
 

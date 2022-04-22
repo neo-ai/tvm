@@ -1726,7 +1726,11 @@ bool STFTRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
     dim += 1;
   }
   oshape.push_back(param->onesided ? param->n_fft / 2 + 1 : param->n_fft);
-  oshape.push_back(indexdiv((data->shape[dim] - param->n_fft), param->hop_length) + 1);  // n_frames
+  if (data->shape[dim].as<AnyNode>())
+    oshape.push_back(Any());
+  else
+    oshape.push_back(indexdiv((data->shape[dim] - param->n_fft), param->hop_length) +
+                     1);  // n_frames
   oshape.push_back(2);
   reporter->Assign(types[2], TensorType(oshape, data->dtype));
   return true;

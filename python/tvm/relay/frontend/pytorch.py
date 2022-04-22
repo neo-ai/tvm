@@ -2103,8 +2103,6 @@ class PyTorchOpConverter:
             kernel_size,
         )
 
-        return _op.nn.bias_add(conv_out, bias)
-
     def stft(self, inputs, input_types):
         data = inputs[0]
         n_fft = inputs[1]

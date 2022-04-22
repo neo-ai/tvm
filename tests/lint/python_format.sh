@@ -18,8 +18,4 @@
 
 
 ./tests/lint/git-black.sh HEAD~1
-<<<<<<< HEAD
-./tests/lint/git-black.sh origin/release-1.10.0
-=======
-./tests/lint/git-black.sh origin/release-1.11.2
->>>>>>> c494074d1... Add: relay stft operator support.
+./tests/lint/git-black.sh origin/release-1.10.1

@@ -1760,6 +1760,7 @@ def unique(data, is_sorted=True, return_counts=False):
         return TupleWrapper(_make.unique(data, is_sorted, return_counts), 5)
     return TupleWrapper(_make.unique(data, is_sorted, return_counts), 4)
 
+
 def stft(data, n_fft, hop_length, win_length, window, normalized, onesided):
     """
     The STFT computes the Fourier transform of short overlapping windows of the input.
