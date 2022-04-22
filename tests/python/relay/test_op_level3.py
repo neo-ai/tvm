@@ -2111,6 +2111,8 @@ class TestSTFT:
                         np_result[batch][w][m][1] /= math.sqrt(n_fft)
         return np_result
 
+    use_dyn = tvm.testing.parameter(True, False, ids=["dyn", "static"])
+
     @tvm.testing.parametrize_targets("llvm", "cuda")
     def test_stft(
         self,
@@ -2124,33 +2126,39 @@ class TestSTFT:
         window_np: np.ndarray,
         normalized: bool,
         onesided: bool,
+        use_dyn,
     ):
-        data = relay.var(
-            "data",
-            relay.TensorType(data_np.shape, str(data_np.dtype)),
-        )
-        window = relay.var(
-            "window",
-            relay.TensorType(window_np.shape, str(window_np.dtype)),
-        )
+        if use_dyn:
+            data = relay.var(
+                "data",
+                relay.TensorType([relay.Any(), relay.Any()], str(data_np.dtype)),
+            )
+            window = relay.var(
+                "window",
+                relay.TensorType([relay.Any()], str(window_np.dtype)),
+            )
+            backends = ["vm"]
+        else:
+            data = relay.var(
+                "data",
+                relay.TensorType(data_np.shape, str(data_np.dtype)),
+            )
+            window = relay.var(
+                "window",
+                relay.TensorType(window_np.shape, str(window_np.dtype)),
+            )
+            backends = ["graph", "vm"]
 
         z = relay.op.stft(data, n_fft, hop_length, win_length, window, normalized, onesided)
-
         func = relay.Function([data, window], z)
         verify_func(
-            target,
-            dev,
-            func,
-            [data_np, window_np],
-            ref_res,
-            rtol=1e-3,
-            atol=1e-3,
+            target, dev, func, [data_np, window_np], ref_res, rtol=1e-3, atol=1e-3, kinds=backends
         )
 
 
-def verify_func(target, dev, func, data, ref_res, rtol=1e-5, atol=1e-7):
+def verify_func(target, dev, func, data, ref_res, rtol=1e-5, atol=1e-7, kinds=["vm"]):
     assert isinstance(data, list)
-    for kind in ["vm"]:
+    for kind in kinds:
         mod = tvm.ir.IRModule.from_expr(func)
         op_res = relay.create_executor(kind, mod=mod, device=dev, target=target).evaluate()(*data)
         if isinstance(op_res, tvm.runtime.container.ADT):

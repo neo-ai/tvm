@@ -4075,6 +4075,11 @@ def test_stft():
     verify_trace_model(test_fn(3, 3, 3, True, "reflect", False, True), [input, window], targets)
     verify_trace_model(test_fn(3, 3, 3, True, "reflect", True, True), [input, window], targets)
     verify_trace_model(test_fn(3, 3, 3, True, "reflect", False, False), [input, window], targets)
+    input = torch.rand([2, 12]).float()
+    window = torch.tensor([2, 3, 4], dtype=torch.int32)
+    verify_trace_model(test_fn(3, 3, 3, False, "reflect", False, True), [input, window], targets)
+    window = torch.tensor([1, 3], dtype=torch.int32)
+    verify_trace_model(test_fn(2, 1, 2, False, "reflect", False, True), [input, window], targets)
 
 
 if __name__ == "__main__":

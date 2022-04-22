@@ -82,6 +82,7 @@ def stft(
         normalized,
         onesided,  # pylint: disable=unused-argument
         output_ptr,
+        loop_kind,
     ):
         ib = tir.ir_builder.create()
         data = ib.buffer_ptr(data_ptr)
@@ -89,8 +90,9 @@ def stft(
         output = ib.buffer_ptr(output_ptr)
 
         with ib.for_range(0, output_ptr.shape[0]) as batch:
+            # https://librosa.org/doc/0.7.2/_modules/librosa/core/spectrum.html#stft
             with ib.for_range(0, output_ptr.shape[1], kind="parallel") as row:
-                with ib.for_range(0, output_ptr.shape[2], kind="vectorize") as col:
+                with ib.for_range(0, output_ptr.shape[2], kind=loop_kind) as col:
                     output[batch, row, col, 0] = tir.Cast(data_ptr.dtype, 0)
                     output[batch, row, col, 1] = tir.Cast(data_ptr.dtype, 0)
                     with ib.for_range(0, win_length) as wlen:
@@ -111,12 +113,15 @@ def stft(
         return ib.get()
 
     output_buf = tir.decl_buffer(output_shape, data.dtype, "output_buf")
+    loop_kind = "vectorize"
+    if hasattr(output_shape[2], "name") and output_shape[2].name == "any_dim":
+        loop_kind = "serial"
 
     return te.extern(
         output_shape,
         [data, window],
         lambda ins, outs: gen_ir(
-            ins[0], n_fft, hop_length, win_length, ins[1], normalized, onesided, outs[0]
+            ins[0], n_fft, hop_length, win_length, ins[1], normalized, onesided, outs[0], loop_kind
         ),
         dtype=[data.dtype],
         out_buffers=[output_buf],
