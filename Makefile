@@ -136,7 +136,7 @@ jvminstall:
 			-Dcflags="$(PKG_CFLAGS)" -Dldflags="$(PKG_LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/$(OUTPUTDIR)" $(JVM_TEST_ARGS))
 format:
-	./tests/lint/git-clang-format.sh -i origin/main
+	./tests/lint/git-clang-format.sh -i origin/release-1.10.1
 	black .
 	cd rust; which cargo && cargo fmt --all; cd ..
 

@@ -1135,3 +1135,14 @@ def schedule_transpose_cuda(attrs, outs, target):
     ):
         return topi.cuda.schedule_transpose(outs)
     return schedule_injective(attrs, outs, target)
+
+
+@stft_strategy.register(["cuda", "gpu"])
+def stft_strategy_cuda(attrs, inputs, out_type, target):
+    strategy = _op.OpStrategy()
+    strategy.add_implementation(
+        wrap_compute_stft(topi.cuda.stft),
+        wrap_topi_schedule(topi.generic.schedule_extern),
+        name="stft.cuda",
+    )
+    return strategy
