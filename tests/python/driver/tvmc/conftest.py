@@ -147,7 +147,7 @@ def pytorch_resnet18(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def onnx_resnet50():
-    base_url = "https://github.com/onnx/models/raw/master/vision/classification/resnet/model"
+    base_url = "https://github.com/onnx/models/raw/main/vision/classification/resnet/model"
     file_to_download = "resnet50-v2-7.onnx"
     model_file = download_testdata(
         "{}/{}".format(base_url, file_to_download), file_to_download, module=["tvmc"]
@@ -158,7 +158,7 @@ def onnx_resnet50():
 
 @pytest.fixture(scope="session")
 def onnx_mnist():
-    base_url = "https://github.com/onnx/models/raw/master/vision/classification/mnist/model"
+    base_url = "https://github.com/onnx/models/raw/main/vision/classification/mnist/model"
     file_to_download = "mnist-1.onnx"
     model_file = download_testdata(
         "{}/{}".format(base_url, file_to_download), file_to_download, module=["tvmc"]
