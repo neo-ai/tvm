@@ -3038,6 +3038,35 @@ class Unique(OnnxOpConverter):
         return _expr.TupleWrapper(_expr.Tuple([unique_vals, indices, inverse_indices, counts]), 4)
 
 
+class LinearRegressor(OnnxOpConverter):
+    """Operator converter for LinearRegressor."""
+
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        data = inputs[0]
+        coefficients = attr.get("coefficients", 0)
+        data_shape = infer_shape(data)
+        targets = attr.get("targets", 1)
+        coefficients = _expr.const(list(coefficients), dtype="float32")
+        coefficients_shape = infer_shape(coefficients)
+
+        coefficients = _op.reshape(coefficients, (targets, coefficients_shape[0] // targets))
+        if coefficients_shape[0] // targets < data_shape[-1]:
+            data = _op.split(data, [coefficients_shape[0] // targets], -1)[0]
+
+        mm_out = _op.nn.dense(data, coefficients)
+
+        if "intercepts" in attr:
+            intercepts = attr.get("intercepts", 0)
+            intercepts = _expr.const(list(intercepts), dtype="float32")
+
+            if targets == 1:
+                return _op.nn.bias_add(mm_out, intercepts, axis=-1)
+            return get_relay_op("add")(mm_out, intercepts)
+
+        return mm_out
+
+
 # compatible operators that do NOT require any conversion.
 _identity_list = []
 
@@ -3214,6 +3243,8 @@ def _get_convert_map(opset):
         "DynamicQuantizeLinear": DynamicQuantizeLinear.get_converter(opset),
         "ReverseSequence": ReverseSequence.get_converter(opset),
         "QLinearConv": QLinearConv.get_converter(opset),
+        # ML
+        "LinearRegressor": LinearRegressor.get_converter(opset),
     }
 
 
