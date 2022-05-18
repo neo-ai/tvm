@@ -4640,8 +4640,7 @@ def test_qlinearconv():
     )
 
 
-@tvm.testing.parametrize_targets
-def test_LinearRegressor(target, dev):
+def test_LinearRegressor():
     def verify_LinearRegressor(a_shape, c_shape, i_shape, targets=1, batch=1):
         a_array = np.random.uniform(size=a_shape).astype("float32")
         out_shape = (batch, targets)
@@ -4674,7 +4673,7 @@ def test_LinearRegressor(target, dev):
                 onnx.helper.make_opsetid("ai.onnx.ml", 1),
             ],
         )
-        verify_with_ort_with_inputs(model, [a_array], target=target, dev=dev)
+        verify_with_ort_with_inputs(model, [a_array])
 
     verify_LinearRegressor((1, 3), (3), (1))
     verify_LinearRegressor((2, 10), (10), (1), batch=2)
