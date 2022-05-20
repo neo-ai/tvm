@@ -4640,6 +4640,7 @@ def test_qlinearconv():
     )
 
 
+@tvm.testing.uses_gpu
 def test_LinearRegressor():
     def verify_LinearRegressor(a_shape, c_shape, i_shape, targets=1, batch=1):
         a_array = np.random.uniform(size=a_shape).astype("float32")
@@ -4652,8 +4653,8 @@ def test_LinearRegressor():
             "LinearRegressor",
             ["a"],
             ["out"],
-            coefficients=coefficients,
-            intercepts=intercepts,
+            coefficients=coefficients.tolist(),
+            intercepts=intercepts.tolist(),
             targets=targets,
             domain="ai.onnx.ml",
         )
@@ -4664,7 +4665,9 @@ def test_LinearRegressor():
             inputs=[
                 helper.make_tensor_value_info("a", TensorProto.FLOAT, list(a_shape)),
             ],
-            outputs=[helper.make_tensor_value_info("out", TensorProto.FLOAT, out_shape)],
+            outputs=[
+                helper.make_tensor_value_info("out", TensorProto.FLOAT, out_shape),
+            ],
         )
         model = helper.make_model(
             graph,
@@ -4675,11 +4678,11 @@ def test_LinearRegressor():
         )
         verify_with_ort_with_inputs(model, [a_array])
 
-    verify_LinearRegressor((1, 3), (3), (1))
-    verify_LinearRegressor((2, 10), (10), (1), batch=2)
-    verify_LinearRegressor((1, 3), (30), (10), targets=10)
-    verify_LinearRegressor((10, 3), (30), (10), targets=10, batch=10)
-    verify_LinearRegressor((1, 4), (3), (1))
+    verify_LinearRegressor((1, 3), (3,), (1,))
+    verify_LinearRegressor((2, 10), (10,), (1,), batch=2)
+    verify_LinearRegressor((1, 3), (30,), (10,), targets=10)
+    verify_LinearRegressor((10, 3), (30,), (10,), targets=10, batch=10)
+    verify_LinearRegressor((1, 4), (3,), (1,))
 
 
 if __name__ == "__main__":
