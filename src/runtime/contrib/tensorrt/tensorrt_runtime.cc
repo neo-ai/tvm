@@ -311,6 +311,7 @@ class TensorRTRuntime : public JSONRuntimeBase {
     helper.DeclareField("batch_size", &batch_size);
     helper.ReadAllFields(&reader);
     trt_engine_cache_[std::make_pair(symbol_name_, batch_size)] = engine_and_context;
+    max_batch_size_ = batch_size;
     return true;
   }
 
