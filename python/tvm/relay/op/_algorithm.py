@@ -24,11 +24,13 @@ from tvm.runtime import convert
 from . import strategy
 from . import op as _reg
 from .op import OpPattern, register_pattern
-from .op import register_strategy
+from .op import register_strategy, register_shape_func
+from ._tensor import elemwise_shape_func
 
 # argsort
 register_strategy("argsort", strategy.argsort_strategy)
 register_pattern("argsort", OpPattern.OPAQUE)
+register_shape_func("argsort", False, elemwise_shape_func)
 
 # topk
 register_strategy("topk", strategy.topk_strategy)
