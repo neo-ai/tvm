@@ -206,7 +206,14 @@ def _InverseLabelTransformer(op, inexpr, dshape, dtype, columns=None):
     if dshape[-1] == 1:
         ret = _op.cast(_op.greater(inexpr, _op.const(0.5)), "int32")
     else:
-        ret = _op.argmax(inexpr, axis=1)
+        if columns is None or columns.lower() == "predicted_label":
+            ret = _op.argmax(inexpr, axis=1)
+        elif columns.lower() == "all":
+            y0 = _op.argsort(inexpr, axis=1, is_ascend=False)
+            y1 = _op.gather(inexpr, axis=1, indices=y0)
+            ret = Tuple([y0, y1])
+        else:
+            raise NameError("Supported columns: predicted_label (default) or all")
 
     return ret
 
@@ -687,7 +694,7 @@ def from_sklearn(model, shape=None, dtype="float32", func_name="transform", colu
     return IRModule.from_expr(func), []
 
 
-def from_auto_ml(model, shape=None, dtype="float32", func_name="transform"):
+def from_auto_ml(model, shape=None, dtype="float32", func_name="transform", columns=None):
     """
     Import scikit-learn model to Relay.
     """
@@ -734,11 +741,11 @@ def from_auto_ml(model, shape=None, dtype="float32", func_name="transform"):
 
         outexpr = inexpr
         for _, transformer in model.feature_transformer.steps:
-            outexpr = sklearn_op_to_relay(transformer, outexpr, shape, dtype, func_name, None)
+            outexpr = sklearn_op_to_relay(transformer, outexpr, shape, dtype, func_name, columns)
     else:
         inexpr = _expr.var("input", shape=shape, dtype=dtype)
         transformer = model.target_transformer
-        outexpr = sklearn_op_to_relay(transformer, inexpr, shape, dtype, func_name, None)
+        outexpr = sklearn_op_to_relay(transformer, inexpr, shape, dtype, func_name, columns)
 
     func = _function.Function(analysis.free_vars(outexpr), outexpr)
     return IRModule.from_expr(func), []
