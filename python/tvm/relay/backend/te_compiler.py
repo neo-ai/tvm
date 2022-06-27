@@ -19,8 +19,10 @@
 from __future__ import absolute_import
 
 import logging
+
+import numpy as np
 import tvm
-from tvm import te, autotvm
+from tvm import autotvm, te
 from tvm.ir.transform import PassContext
 from tvm.runtime import Object
 from tvm.support import libinfo
