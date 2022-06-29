@@ -95,7 +95,7 @@ if (currentBuild.getBuildCauses().toString().contains('BranchIndexingCause')) {
 }
 
 // Filenames for stashing between build and test steps
-s3_prefix = "tvm-jenkins-artifacts-prod/tvm/${env.BRANCH_NAME}/${env.BUILD_NUMBER}"
+s3_prefix = "neo-ai-tvm-jenkins-artifacts-prod/tvm/${env.BRANCH_NAME}/${env.BUILD_NUMBER}"
 
 
 // General note: Jenkins has limits on the size of a method (or top level code)
@@ -116,11 +116,13 @@ def init_git() {
     label: 'Show executor node info',
   )
 
+  /*
   // Determine merge commit to use for all stages
   sh (
     script: 'git fetch origin v0.9.0',
     label: 'Fetch upstream',
   )
+
   if (upstream_revision == null) {
     upstream_revision = sh(
       script: 'git log -1 FETCH_HEAD --format=\'%H\'',
@@ -132,6 +134,7 @@ def init_git() {
     script: "git -c user.name=TVM-Jenkins -c user.email=jenkins@tvm.apache.org merge ${upstream_revision}",
     label: 'Merge to origin/v0.9.0'
   )
+  */
 
   sh(
     script: '''
@@ -314,13 +317,15 @@ def prepare() {
           echo " ci_wasm = ${ci_wasm}"
         """, label: 'Docker image names')
 
+        echo sh(script: 'env|sort', returnStdout: true)
+
         is_docs_only_build = sh (
           returnStatus: true,
           script: './tests/scripts/git_change_docs.sh',
           label: 'Check for docs only changes',
         )
-        skip_ci = should_skip_ci(env.CHANGE_ID)
-        skip_slow_tests = should_skip_slow_tests(env.CHANGE_ID)
+        skip_ci = false //should_skip_ci(env.CHANGE_ID)
+        skip_slow_tests = false //should_skip_slow_tests(env.CHANGE_ID)
         rebuild_docker_images = sh (
           returnStatus: true,
           script: './tests/scripts/git_change_docker.sh',
@@ -434,6 +439,7 @@ def build_image(image_name) {
 def build_docker_images() {
   stage('Docker Image Build') {
     parallel(
+      /*
       'ci_arm': {
         node('ARM') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -445,6 +451,7 @@ def build_docker_images() {
           }
         }
       },
+      */
       'ci_cpu': {
         node('CPU') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -780,6 +787,7 @@ stage('Build') {
       Utils.markStageSkippedForConditional('BUILD: i386')
     }
   },
+  /*
   'BUILD: arm': {
     if (!skip_ci && is_docs_only_build != 1) {
       node('ARM-SMALL') {
@@ -810,6 +818,7 @@ stage('Build') {
       Utils.markStageSkippedForConditional('BUILD: arm')
     }
   },
+  */
   'BUILD: QEMU': {
     if (!skip_ci && is_docs_only_build != 1) {
       node('CPU-SMALL') {
@@ -2981,6 +2990,7 @@ stage('Test') {
   'test: Hexagon 7 of 7': {
     shard_run_test_Hexagon_7_of_7()
   },
+  /*
   'integration: aarch64 1 of 4': {
     shard_run_integration_aarch64_1_of_4()
   },
@@ -2993,6 +3003,7 @@ stage('Test') {
   'integration: aarch64 4 of 4': {
     shard_run_integration_aarch64_4_of_4()
   },
+  */
   'topi: GPU 1 of 4': {
     shard_run_topi_GPU_1_of_4()
   },
@@ -3023,6 +3034,7 @@ stage('Test') {
   'frontend: GPU 6 of 6': {
     shard_run_frontend_GPU_6_of_6()
   },
+  /*
   'topi: aarch64 1 of 2': {
     shard_run_topi_aarch64_1_of_2()
   },
@@ -3035,6 +3047,7 @@ stage('Test') {
   'frontend: aarch64 2 of 2': {
     shard_run_frontend_aarch64_2_of_2()
   },
+  */
   'unittest: CPU': {
     if (!skip_ci && is_docs_only_build != 1) {
       node('CPU-SMALL') {
@@ -3380,4 +3393,4 @@ build()
 
 test()
 
-deploy()
+// deploy()
