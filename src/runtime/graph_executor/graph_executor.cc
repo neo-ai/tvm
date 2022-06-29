@@ -157,6 +157,44 @@ void GraphExecutor::SetInput(int index, DLTensor* data_in) {
   data_entry_[eid].CopyFrom(data_in);
 }
 /*!
+ * \brief Get the name of the index-th input.
+ * \param index The input index.
+ *
+ * \return The name of the index-th input.
+ */
+std::string GraphExecutor::GetInputName(int index) const {
+  CHECK_LT(static_cast<size_t>(index), input_nodes_.size()) << "The index is out of range.";
+  return nodes_[input_nodes_[index]].name;
+}
+/*!
+ * \brief Get the type of the index-th input.
+ * \param index The input index.
+ *
+ * \return The type of the index-th input.
+ */
+std::string GraphExecutor::GetInputType(int index) const {
+  CHECK_LT(static_cast<size_t>(index), input_nodes_.size()) << "The index is out of range.";
+  uint32_t eid = this->entry_id(input_nodes_[index], 0);
+  return attrs_.dltype[eid];
+}
+/*!
+ * \brief Get the type of the index-th output.
+ * \param index The output index.
+ *
+ * \return The type of the index-th output.
+ */
+std::string GraphExecutor::GetOutputType(int index) const {
+  CHECK_LT(static_cast<size_t>(index), outputs_.size()) << "The index is out of range.";
+  uint32_t eid = this->entry_id(outputs_[index]);
+  return attrs_.dltype[eid];
+}
+/*!
+ * \brief Get the names of weight inputs.
+ *
+ * \return The names of the weight inputs.
+ */
+std::vector<std::string> GraphExecutor::GetWeightNames() const { return weight_names_; }
+/*!
  * \brief Check the legality of external DLTensor*.
  * \param external The external DLTensor*.
  * \param eid The data_enrty_ index.
@@ -277,6 +315,7 @@ void GraphExecutor::LoadParams(const std::string& param_blob) {
 }
 
 void GraphExecutor::LoadParams(dmlc::Stream* strm) {
+  weight_names_.clear();
   Map<String, NDArray> params = ::tvm::runtime::LoadParams(strm);
   for (auto& p : params) {
     param_names_.insert(p.first);
@@ -284,6 +323,8 @@ void GraphExecutor::LoadParams(dmlc::Stream* strm) {
     if (in_idx < 0) continue;
     uint32_t eid = this->entry_id(input_nodes_[in_idx], 0);
     data_entry_[eid].CopyFrom(p.second);
+    // neo-ai-tvm: Store weight names.
+    weight_names_.push_back(p.first);
   }
 }
 
