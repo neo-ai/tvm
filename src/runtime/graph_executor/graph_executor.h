@@ -131,6 +131,27 @@ class TVM_DLL GraphExecutor : public ModuleNode {
    */
   void SetInput(int index, DLTensor* data_in);
   /*!
+   * \brief Get the name of the index-th input.
+   * \param index The input index.
+   *
+   * \return The name of the index-th input.
+   */
+  std::string GetInputName(int index) const;
+  /*!
+   * \brief Get the type of the index-th input.
+   * \param index The input index.
+   *
+   * \return The type of the index-th input.
+   */
+  std::string GetInputType(int index) const;
+  /*!
+   * \brief Get the type of the index-th output.
+   * \param index The output index.
+   *
+   * \return The type of the index-th output.
+   */
+  std::string GetOutputType(int index) const;
+  /*!
    * \brief set index-th input to the graph without copying the data
    * \param index The input index.
    * \param data_ref The input data that is referred.
@@ -154,6 +175,12 @@ class TVM_DLL GraphExecutor : public ModuleNode {
    * \return The number of inputs to the graph.
    */
   int NumInputs() const;
+  /*!
+   * \brief Get the names of weight inputs.
+   *
+   * \return The names fo the weight inputs.
+   */
+  std::vector<std::string> GetWeightNames() const;
   /*!
    * \brief Return NDArray for given input index.
    * \param index The input index.
@@ -423,6 +450,8 @@ class TVM_DLL GraphExecutor : public ModuleNode {
   uint32_t entry_id(const NodeEntry& e) const { return entry_id(e.node_id, e.index); }
   // Number of node entries.
   uint32_t num_node_entries() const { return node_row_ptr_.back(); }
+  /*! \brief The weight names. */
+  std::vector<std::string> weight_names_;
   /*! \brief The graph nodes. */
   std::vector<Node> nodes_;
   /*! \brief The argument nodes. */
