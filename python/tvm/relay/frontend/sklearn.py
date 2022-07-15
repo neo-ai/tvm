@@ -189,22 +189,36 @@ def _InverseLabelTransformer(op, inexpr, dshape, dtype, columns=None):
     """
     if len(dshape) > 2:
         raise ValueError(
-            "Dim of Input for InverseLabelTransformer should be 1 or 2, {} is given".format(
+            "Dim of Input for InverseLabelTransformer should be 1 or 2, but {} is given".format(
                 len(dshape)
             )
         )
 
-    if dshape[-1] == 1:
-        ret = _op.cast(_op.greater(inexpr, _op.const(0.5)), "int32")
-    else:
-        if columns is None or columns.lower() == "predicted_label":
-            ret = _op.argmax(inexpr, axis=1)
-        elif columns.lower() == "all":
-            y0 = _op.argsort(inexpr, axis=1, is_ascend=False)
-            y1 = _op.gather(inexpr, axis=1, indices=y0)
-            ret = Tuple([y0, y1])
+    # XGBoost binary classification input shape is (1,1)
+    # MLP and LL binary classification input shape is (1,2)
+    # MLP, LL and XGBoost multiclass classification input shape is (1,num_class)
+    if columns is None or columns.lower() == "predicted_label":
+        if dshape[-1] == 1:
+            # XGB binary classification
+            # Compare input prob with 0.5 to find the winning class_id
+            ret = _op.cast(_op.greater(inexpr, _op.const(0.5)), "int32")
         else:
-            raise NameError("Supported columns: predicted_label (default) or all")
+            # multiclass classification and MLP/LL binary classification
+            # find winning class_id by using argmax(probs)
+            ret = _op.argmax(inexpr, axis=-1)
+    elif columns.lower() == "all":
+        last_axis = len(dshape) - 1  # relay.gather does not support axis=-1
+        if dshape[-1] == 1:
+            # XGB binary classification
+            # convert single probability to two probabilities (for each class) [[x]] -> [[1-x, x]]
+            inv_prob = _op.subtract(relay.const(1.0), inexpr)
+            inexpr = _op.concatenate([inv_prob, inexpr], axis=-1)
+        # return class_ids and probabilities sorted by probabilities descending
+        y0 = _op.argsort(inexpr, axis=-1, is_ascend=False)
+        y1 = _op.gather(inexpr, axis=last_axis, indices=y0)
+        ret = Tuple([y0, y1])
+    else:
+        raise NameError("Supported columns: predicted_label (default) or all")
 
     return ret
 
