@@ -177,7 +177,7 @@ def partition_for_tensorrt(
     with tvm.transform.PassContext(opt_level=3, config={"relay.ext.tensorrt.options": config}):
         mod = seq(mod)
         # TODO(mbs): Revisit
-        # mod = prune_tensorrt_subgraphs(mod)
+        mod = prune_tensorrt_subgraphs(mod)
     return mod, config
 
 
