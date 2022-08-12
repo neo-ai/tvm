@@ -27,6 +27,10 @@ from sagemaker_sklearn_extension.externals import AutoMLTransformer
 from sagemaker_sklearn_extension.externals import Header
 from sagemaker_sklearn_extension.impute import RobustImputer, RobustMissingIndicator
 from sagemaker_sklearn_extension.decomposition import RobustPCA
+from sagemaker_sklearn_extension.feature_extraction.date_time import (
+    DateTimeDefinition,
+    DateTimeVectorizer,
+)
 from sagemaker_sklearn_extension.feature_extraction.text import MultiColumnTfidfVectorizer
 from sagemaker_sklearn_extension.preprocessing import (
     RobustStandardScaler,
@@ -48,17 +52,17 @@ import scipy
 
 class SklearnTestHelper:
     def __init__(self, target="llvm", ctx=tvm.cpu(0)):
-        self.compiled_model = None
+        self.mod = None
         self.target = target
         self.ctx = ctx
 
     def compile(self, model, dshape, dtype, func_name, columns=None, auto_ml=False):
         if auto_ml:
-            mod, _ = relay.frontend.from_auto_ml(model, dshape, dtype, func_name)
+            self.mod, _ = relay.frontend.from_auto_ml(model, dshape, dtype, func_name)
         else:
-            mod, _ = relay.frontend.from_sklearn(model, dshape, dtype, func_name, columns)
+            self.mod, _ = relay.frontend.from_sklearn(model, dshape, dtype, func_name, columns)
 
-        self.ex = relay.create_executor("vm", mod=mod, ctx=self.ctx, target=self.target)
+        self.ex = relay.create_executor("vm", mod=self.mod, ctx=self.ctx, target=self.target)
 
     def run(self, data):
         result = self.ex.evaluate()(data)
@@ -224,35 +228,88 @@ def test_pca():
 
 
 def test_date_time_vectorizer():
-    from sagemaker_sklearn_extension.feature_extraction.date_time import DateTimeVectorizer
-
-    st_helper = SklearnTestHelper()
-
     data = np.array(
         [
             "Jan 3th, 2018, 1:34am",
             "Feb 11th, 2012, 11:34:59pm",
         ]
-    ).reshape((-1, 1))
+    ).reshape((1, -1))  # (1,2)
 
     translated_data = np.array(
-        [[3, 2018, 1, 34, 0, 1, 1], [6, 2012, 23, 34, 59, 2, 6]], dtype=np.float32
-    )
+        [
+            [3, 2018, 1, 34, 0, 1, 1],
+            [6, 2012, 23, 34, 59, 2, 6]
+        ],
+        dtype=np.float32
+    ).reshape((1, -1))  # (1,14)
 
-    date_time = DateTimeVectorizer(mode="ordinal", ignore_constant_columns=True)
-    python_out = date_time.fit_transform(data)
+    for mode in ["cyclic", "ordinal"]:
+        for ignore_constant_columns in [False, True]:
+            dt_vec = DateTimeVectorizer(
+                mode=mode,
+                ignore_constant_columns=ignore_constant_columns,
+                extract=[
+                    DateTimeDefinition.WEEKDAY.value,
+                    DateTimeDefinition.YEAR.value,
+                    DateTimeDefinition.MONTH.value,
+                    DateTimeDefinition.WEEK_OF_YEAR.value,
+                ],
+            )
+            sklearn_out = dt_vec.fit_transform(data)
+            dshape = (relay.Any(), 14)
+            st_helper = SklearnTestHelper()
+            st_helper.compile(dt_vec, dshape, "float32", "transform", columns=[0, 1])
+            tvm_out = st_helper.run(translated_data)
+            tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
 
-    dshape = (relay.Any(), 7)
-    st_helper.compile(date_time, dshape, "float32", "transform")
 
-    tvm_out = st_helper.run(translated_data)
-    tvm.testing.assert_allclose(python_out, tvm_out, rtol=1e-5, atol=1e-5)
+def test_date_time_vectorizer_with_robust_imputer():
+    data = np.array(
+        [
+            "Jan 3th, 2018, 1:34am",
+            "Feb 11th, 2012, 11:34:59pm",
+        ]
+    ).reshape((1, -1))  # (1,2)
 
-    date_time = DateTimeVectorizer(mode="cyclic", ignore_constant_columns=True)
-    python_out = date_time.fit_transform(data)
+    translated_data = np.array(
+        [
+            [3, 2018, 1, 34, 0, 1, 1],
+            [6, 2012, 23, 34, 59, 2, 6]
+        ],
+        dtype=np.float32
+    ).reshape((1, -1))  # (1,14)
 
-    dshape = (relay.Any(), 7)
-    st_helper.compile(date_time, dshape, "float32", "transform")
+    nan_data = np.array([None, None]).reshape((1, -1))  # (1,2)
+    nan_translated_data = np.array([None] * 14, dtype=np.float32).reshape((1, -1))
+
+    for mode in ["cyclic", "ordinal"]:
+        for ignore_constant_columns in [False, True]:
+            dt_vec = DateTimeVectorizer(
+                mode=mode,
+                ignore_constant_columns=ignore_constant_columns,
+                extract=[
+                    DateTimeDefinition.WEEKDAY.value,
+                    DateTimeDefinition.YEAR.value,
+                    DateTimeDefinition.MONTH.value,
+                    DateTimeDefinition.WEEK_OF_YEAR.value,
+                ],
+            )
+            pipeline = Pipeline(
+                steps=[
+                    ('datetimevectorizer', dt_vec),
+                    ('robustimputer1', RobustImputer(strategy='median'))
+                ]
+            )
+            sklearn_out = pipeline.fit_transform(data)
+            dshape = (relay.Any(), 14)
+            st_helper = SklearnTestHelper()
+            st_helper.compile(pipeline, dshape, "float32", "transform", columns=[0, 1])
+            tvm_out = st_helper.run(translated_data)
+            tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
+            # Run again (transform only, no fit) but with empty NaN data
+            nan_sklearn_out = pipeline.transform(nan_data)
+            nan_tvm_out = st_helper.run(nan_translated_data)
+            tvm.testing.assert_allclose(nan_sklearn_out, nan_tvm_out, rtol=1e-5, atol=1e-5)
 
 
 def test_automl():
@@ -382,3 +439,4 @@ if __name__ == "__main__":
     test_feature_union()
     test_inverse_label_transformer()
     test_date_time_vectorizer()
+    test_date_time_vectorizer_with_robust_imputer()

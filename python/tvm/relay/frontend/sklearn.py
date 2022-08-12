@@ -148,7 +148,7 @@ def _Pipeline(op, inexpr, dshape, dtype, func_name, columns=None):
 def _MultiColumn(op, inexpr, dshape, dtype, func_name, columns=None):
     """
     Scikit-Learn Pipeline:
-    Handling of multi-column based tranforms which applied on multiple inputs (len(inexpr) > 0)
+    Handling of multi-column based transforms which applied on multiple inputs (len(inexpr) > 0)
     Currently support: MultiColumnTfidfVectorizer
     """
     assert len(inexpr) > 0
@@ -174,16 +174,7 @@ def _ColumnTransformer(op, inexpr, dshape, dtype, func_name, columns=None):
             continue
         mod = pipe.steps[0][1]
         op_type = column_transformer_op_types[type(mod).__name__]
-        if proc_name == "datetime_processing":
-            for i in range(len(cols)):
-                date_cols = i * kNumDateTimeCols + np.arange(kNumDateTimeCols, dtype=np.int)
-                date_shape = (dshape[0], kNumDateTimeCols)
-                out.append(
-                    sklearn_op_to_relay(
-                        pipe, inexpr[op_type], date_shape, dtype, func_name, date_cols
-                    )
-                )
-        elif proc_name == "text_processing":
+        if proc_name == "text_processing":
             # Pass all text input count matrices to pipeline, which is the last section of input array
             out.append(sklearn_op_to_relay(pipe, inexpr[op_type:], dshape, dtype, func_name, cols))
         else:
@@ -563,6 +554,21 @@ def _cyclic_transform(data, low, high, dtype):
 
 
 def _DateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
+    if columns is None:
+        return _SingleColDateTimeVectorizer(op, inexpr, dshape, dtype, columns)
+    # DateTime input is a 2D array with shape (n_of_rows x n_of_columns * 7)
+    # Single DateTime input value contains 7 numbers (kNumDateTimeCols).
+    # DateTime columns will be processed one by one.
+    # At the end the results should be combined together into a single array (along axis 1)
+    out = []
+    for i in range(len(columns)):
+        date_cols = i * kNumDateTimeCols + np.arange(kNumDateTimeCols, dtype=np.int)
+        res = _SingleColDateTimeVectorizer(op, inexpr, dshape, dtype, date_cols)
+        out.append(res)
+    return _op.concatenate(out, axis=1)
+
+
+def _SingleColDateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
     """
     Sagemaker-Scikit-Learn-Extension Transformer:
     Converts array-like data with datetime.datetime or strings describing datetime objects into
@@ -610,7 +616,6 @@ def _DateTimeVectorizer(op, inexpr, dshape, dtype, columns=None):
             i += 1
 
     ret = _op.concatenate(out, axis=1)
-
     return ret
 
 
