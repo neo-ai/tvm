@@ -180,21 +180,23 @@ def test_kbins_discretizer():
     _test_model_impl(st_helper, kd, dshape, data)
 
 
-# def test_tfidf_vectorizer():
-#     st_helper = SklearnTestHelper()
-#     tiv = TfidfVectorizer()
-#     data = [
-#         'This is the first document.',
-#         'This document is the second document.',
-#         'And this is the third one.',
-#         'Is this the first document?',
-#     ]
+def test_tfidf_vectorizer():
+    st_helper = SklearnTestHelper()
+    tiv = TfidfVectorizer()
+    corpus = [
+        "This is the first document.",
+        "This document is the second document.",
+        "And this is the third one.",
+        "Is this the first document?",
+    ]
+    sklearn_out = tiv.fit_transform(corpus).toarray()
+    vectorizer = CountVectorizer(dtype=np.float32)
+    data = vectorizer.fit_transform(corpus).toarray()
+    dshape = (relay.Any(), len(data[0]))
 
-#     dshape = (relay.Any(), len(data))
-#     st_helper.compile(tiv, dshape, 'int32')
-#     sklearn_out = tiv.fit_transform(data).toarray()
-#     tvm_out = st_helper.run(data)
-#     tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
+    st_helper.compile(tiv, dshape, "float32", "transform")
+    tvm_out = st_helper.run(data)
+    tvm.testing.assert_allclose(sklearn_out, tvm_out, rtol=1e-5, atol=1e-5)
 
 
 def test_pca():
@@ -368,17 +370,15 @@ def test_inverse_label_transformer():
 if __name__ == "__main__":
     test_simple_imputer()
     test_robust_imputer()
-    test_robust_missing_indicator
+    test_robust_missing_indicator()
     test_robust_scaler()
     test_threshold_onehot_encoder()
     test_robust_ordinal_encoder()
     test_na_label_encoder()
     test_kbins_discretizer()
+    test_tfidf_vectorizer()
     test_pca()
     test_automl()
     test_feature_union()
     test_inverse_label_transformer()
-    test_log_extreme_values_transformer()
-    test_quantile_transformer()
-    test_quantile_extremevalues_transformer()
     test_date_time_vectorizer()
