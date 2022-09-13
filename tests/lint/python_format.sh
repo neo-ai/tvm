@@ -18,4 +18,4 @@
 
 
 ./tests/lint/git-black.sh HEAD~1
-./tests/lint/git-black.sh origin/release-1.10.2
+./tests/lint/git-black.sh origin/release-1.10.3
