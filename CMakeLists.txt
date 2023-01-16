@@ -114,6 +114,7 @@ tvm_option(SUMMARIZE "Print CMake option summary after configuring" OFF)
 tvm_option(USE_CLML "Build with CLML Codegen support" OFF)
 tvm_option(USE_CLML_GRAPH_EXECUTOR "Build with CLML graph runtime" OFF)
 tvm_option(USE_UMA "Build with UMA support" OFF)
+tvm_option(USE_MLAS "Build with MLAS library" OFF)
 
 # include directories
 include_directories(${CMAKE_INCLUDE_PATH})
@@ -504,6 +505,7 @@ include(cmake/modules/contrib/UMA.cmake)
 include(cmake/modules/Git.cmake)
 include(cmake/modules/LibInfo.cmake)
 include(cmake/modules/RustExt.cmake)
+include(cmake/modules/contrib/MLAS.cmake)
 
 include(CheckCXXCompilerFlag)
 if(NOT MSVC)

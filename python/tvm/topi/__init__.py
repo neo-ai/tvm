@@ -47,6 +47,7 @@ from .einsum import *
 from .unique import *
 from .searchsorted import *
 from .stft import *
+from .mlas_op import *
 from . import generic
 from . import nn
 from . import x86

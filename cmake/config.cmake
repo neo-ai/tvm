@@ -386,3 +386,5 @@ set(USE_LIBTORCH OFF)
 
 # Whether to use the Universal Modular Accelerator Interface
 set(USE_UMA OFF)
+# Whether to enable MLAS library that provides sgemm pre-packing optimization
+set(USE_MLAS OFF)

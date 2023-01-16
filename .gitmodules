@@ -13,3 +13,10 @@
 [submodule "3rdparty/cutlass"]
 	path = 3rdparty/cutlass
 	url = https://github.com/NVIDIA/cutlass.git
+	url = https://github.com/agauniyal/rang
+[submodule "3rdparty/vta-hw"]
+	path = 3rdparty/vta-hw
+	url = https://github.com/apache/incubator-tvm-vta
+[submodule "3rdparty/mlas"]
+	path = 3rdparty/mlas
+	url = https://github.com/ymwangg/mlas.git
