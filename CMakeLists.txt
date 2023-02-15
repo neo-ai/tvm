@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.2)
 project(tvm C CXX)
 
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 # Utility functions
 include(cmake/utils/Utils.cmake)
 include(cmake/utils/Summary.cmake)
