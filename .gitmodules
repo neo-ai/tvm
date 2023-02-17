@@ -13,3 +13,6 @@
 [submodule "3rdparty/cutlass"]
 	path = 3rdparty/cutlass
 	url = https://github.com/NVIDIA/cutlass.git
+[submodule "3rdparty/onnxruntime"]
+	path = 3rdparty/onnxruntime
+	url = https://github.com/microsoft/onnxruntime.git
